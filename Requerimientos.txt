@@ -1,0 +1,21 @@
+Cargas masivas de transferencias
+historico o comportamiento de productos terminados y materias primas
+
+comportamiento de cada año y mes de cuanto producieron, y que se ocupo de materias primas
+el objetivo es mostrar cuanto se debe producir y la capacidad, produccion tenga sus ordenes y tiempos al igual que compras
+
+
+entradas: recetas, concentrado de demanda, forecast, historico
+
+El concentrado de demanda es en la entrada y genera informacion para compras de materias primas, y volumen de produccion
+
+la proyeccion es para produccion, los lideres hacen pedidos y almacen compra. Se procesa e inicia la fabricación se genera la remision y factura, en el volumen tambien queda 
+el stock de seguridad y se reporta lo fabricado
+
+La distribución de local y foraneos
+
+-----------------------------------------------------------------------------------------------------------------------------------------------
+El plan de produccion se mostrara para ver si las formulas se puede meter en el desarrollo
+
+
+catalogs de maximos y minimos
