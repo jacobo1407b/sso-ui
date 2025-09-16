@@ -19,3 +19,8 @@ El plan de produccion se mostrara para ver si las formulas se puede meter en el 
 
 
 catalogs de maximos y minimos
+
+
+
+
+

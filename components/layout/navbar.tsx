@@ -48,7 +48,7 @@ export const Navbar = ({ onSidebarToggle }: NavbarProps) => {
 
       <NavbarContent className=" basis-1 pl-4" justify="end">
         <ThemeSwitch />
-        <Badge content="3" color="danger" size="sm" placement="top-right">
+        {/*<Badge content="3" color="danger" size="sm" placement="top-right">
           <Button
             isIconOnly
             variant="flat"
@@ -57,11 +57,13 @@ export const Navbar = ({ onSidebarToggle }: NavbarProps) => {
           >
             <Bell className="w-5 h-5" />
           </Button>
-        </Badge>
+        </Badge>*/}
 
         {/* Configuración */}
         <Button
           isIconOnly
+          as={Link}
+          href="/settings"
           variant="flat"
           className="bg-default-100 hover:bg-default-200 rounded-xl text-foreground" // Usar text-foreground
           aria-label="Configuración"
@@ -83,10 +85,10 @@ export const Navbar = ({ onSidebarToggle }: NavbarProps) => {
             />
           </DropdownTrigger>
           <DropdownMenu aria-label="Acciones de perfil" variant="flat">
-            <DropdownItem href="/users/3353" as={Link} key="profile" startContent={<User className="w-4 h-4 text-default-500" />}>
+            <DropdownItem href="/users/1" as={Link} key="profile" startContent={<User className="w-4 h-4 text-default-500" />}>
               Mi perfil
             </DropdownItem>
-            <DropdownItem key="settings" startContent={<Settings className="w-4 h-4 text-default-500" />}>
+            <DropdownItem href="/settings" as={Link} key="settings" startContent={<Settings className="w-4 h-4 text-default-500" />}>
               Configuración
             </DropdownItem>
             <DropdownItem key="help" startContent={<HelpCircle className="w-4 h-4 text-default-500" />}>

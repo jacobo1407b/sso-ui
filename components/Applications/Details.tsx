@@ -3,12 +3,18 @@ import { useState } from "react";
 import { useRouter } from 'next/navigation';
 import { Button, Card, CardBody, CardHeader, Tooltip, Input, Chip, Divider, useDisclosure } from "@heroui/react";
 import { ArrowLeft, Trash2, Settings, CheckCircle, Copy, EyeOff, Eye } from "lucide-react";
-import { Shield, Plus, Globe, Edit } from "lucide-react";
-import Grants from "./Grants";
-import Delete from "./Delete";
-import ApplicationEditModal from "./Edit";
+import { Shield, Plus, Globe, Edit, AlertTriangle } from "lucide-react";
 
-export default function DetailsApp() {
+import Grants from "./Grants";
+import CommonModal from '@/components/Common/CommonModal';
+import Modal from "./Modal";
+import { clientApp } from "@/types";
+
+
+interface iDetailsProps {
+    appOne: clientApp
+}
+export default function DetailsApp({ appOne }: iDetailsProps) {
 
     const router = useRouter();
 
@@ -57,7 +63,7 @@ export default function DetailsApp() {
                         startContent={<Trash2 className="w-4 h-4" />}>
                         Eliminar
                     </Button>
-                     <Button
+                    <Button
                         variant="flat"
                         startContent={<Edit className="w-4 h-4" />}
                         onPress={onEditOpen}
@@ -75,8 +81,8 @@ export default function DetailsApp() {
                                 <Settings className="w-8 h-8 text-white" />
                             </div>
                             <div>
-                                <h2 className="text-2xl font-bold text-foreground">SSO</h2>
-                                <p className="text-default-500 mt-1">Single SignOut</p>
+                                <h2 className="text-2xl font-bold text-foreground">{appOne.app_name}</h2>
+                                <p className="text-default-500 mt-1">{appOne.description}</p>
                             </div>
                         </div>
                     </div>
@@ -89,16 +95,13 @@ export default function DetailsApp() {
                             <div className="space-y-3">
                                 <div>
                                     <label className="text-sm font-medium text-default-500">Propietario</label>
-                                    <p className="text-foreground">System</p>
+                                    <p className="text-foreground">{appOne.created_by}</p>
                                 </div>
                                 <div>
                                     <label className="text-sm font-medium text-default-500">Creada el</label>
                                     <p className="text-foreground">{new Date().toLocaleDateString("es-ES")}</p>
                                 </div>
-                                <div>
-                                    <label className="text-sm font-medium text-default-500">Último uso</label>
-                                    <p className="text-foreground">{new Date().toLocaleString("es-ES")}</p>
-                                </div>
+
                             </div>
                         </div>
 
@@ -111,7 +114,7 @@ export default function DetailsApp() {
                                     <label className="text-sm font-medium text-default-500 mb-2 block">Client ID</label>
                                     <div className="flex gap-2">
                                         <Input
-                                            value="BNB4383BG843BF893HG349N"
+                                            value={appOne.client_id}
                                             isReadOnly
                                             variant="bordered"
                                             classNames={{
@@ -122,7 +125,7 @@ export default function DetailsApp() {
                                             <Button
                                                 isIconOnly
                                                 variant="flat"
-                                                onPress={() => handleCopy("BNB4383BG843BF893HG349N", "clientId")}
+                                                onPress={() => handleCopy(appOne.client_id, "clientId")}
                                                 className={`${copiedField === "clientId"
                                                     ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
                                                     : "bg-default-100"
@@ -143,7 +146,7 @@ export default function DetailsApp() {
                                     <label className="text-sm font-medium text-default-500 mb-2 block">Client Secret</label>
                                     <div className="flex gap-2">
                                         <Input
-                                            value={showSecret ? "GB45CT34YBUE56BUV54CT4554EC" : "•".repeat("GB45CT34YBUE56BUV54CT4554EC".length)}
+                                            value={showSecret ? appOne.client_secret : "•".repeat(appOne.client_secret.length)}
                                             isReadOnly
                                             variant="bordered"
                                             classNames={{
@@ -159,7 +162,7 @@ export default function DetailsApp() {
                                             <Button
                                                 isIconOnly
                                                 variant="flat"
-                                                onPress={() => handleCopy("GB45CT34YBUE56BUV54CT4554EC", "clientSecret")}
+                                                onPress={() => handleCopy(appOne.client_secret, "clientSecret")}
                                                 className={`${copiedField === "clientSecret"
                                                     ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
                                                     : "bg-default-100"
@@ -202,29 +205,22 @@ export default function DetailsApp() {
                     </CardHeader>
                     <CardBody className="pt-0 ">
                         <div className="space-y-3">
-
-                            <div
-                                key="1"
-                                className="flex items-center gap-3 p-3 rounded-lg bg-default-50"
-                            >
-                                <Globe className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                                <div className="flex-1">
-                                    <p className="font-medium text-foreground">password</p>
-                                    <p className="text-sm text-default-500">Para comunicación servidor a servidor</p>
-                                </div>
-                            </div>
-                            <div
-                                key="2"
-                                className="flex items-center gap-3 p-3 rounded-lg bg-default-50"
-                            >
-                                <Globe className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                                <div className="flex-1">
-                                    <p className="font-medium text-foreground">password</p>
-                                    <p className="text-sm text-default-500">Para comunicación servidor a servidor</p>
-                                </div>
-                            </div>
+                            {appOne.grants?.map((x) => {
+                                return (
+                                    <div
+                                        key={x.id}
+                                        className="flex items-center gap-3 p-3 rounded-lg bg-default-50"
+                                    >
+                                        <Globe className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                                        <div className="flex-1">
+                                            <p className="font-medium text-foreground">{x.grants_name}</p>
+                                            <p className="text-sm text-default-500">{x.description}</p>
+                                        </div>
+                                    </div>
+                                )
+                            }) ?? null}
                         </div>
-                        
+
                     </CardBody>
                 </Card>
 
@@ -236,12 +232,12 @@ export default function DetailsApp() {
                     <CardBody className="pt-0 space-y-4">
                         {/* Redirect URIs */}
                         <div>
-                            <label className="text-sm font-medium text-default-500 mb-2 block">Redirect URIs</label>
+                            <label className="text-sm font-medium text-default-500 mb-2 block">Redirect URI</label>
                             <div className="space-y-2">
 
                                 <div key="1" className="flex items-center gap-2">
                                     <Chip variant="flat" size="sm" className="font-mono text-xs">
-                                        https://app.empresacorp.com/callback
+                                        {appOne.redirect_callback}
                                     </Chip>
                                 </div>
 
@@ -251,7 +247,8 @@ export default function DetailsApp() {
                         <Divider />
 
                         {/* Scopes */}
-                        <div>
+                        {/**
+                         * <div>
                             <label className="text-sm font-medium text-default-500 mb-2 block">Scopes</label>
                             <div className="flex flex-wrap gap-2">
 
@@ -260,6 +257,8 @@ export default function DetailsApp() {
                                 </Chip>
                             </div>
                         </div>
+                         */}
+
                     </CardBody>
                 </Card>
             </div>
@@ -267,34 +266,42 @@ export default function DetailsApp() {
             <Grants
                 isOpen={isGrantsOpen}
                 onClose={onGrantsClose}
-                currentGrants={[]}
-                onSave={handleSaveGrants}
+                currentGrants={appOne.grants?.map((x) => x.id) ?? []}
+
             />
-            <ApplicationEditModal
+            <Modal
                 isOpen={isEditOpen}
                 onClose={onEditClose}
-                application={{
-                    id: "app_001xjK92",
-                    name: "SSO Admin Portal",
-                    description: "Panel centralizado para gestión de usuarios y sesiones SSO.",
-                    clientId: "sso-client-abc123",
-                    clientSecret: "Xz8#pLw45@tR12Vq",
-                    status: "active",
-                    createdAt: "2024-10-18T15:35:00Z",
-                    lastUsed: "2025-07-15T09:22:10Z",
-                    grants: ["authorization_code", "refresh_token"],
-                    redirectUris: [
-                        "https://admin.sso-platform.com/callback",
-                        "https://dev.sso-platform.com/callback"
-                    ],
-                    scopes: ["openid", "profile", "email", "admin"],
-                    owner: "jacobo.mtz@org.com",
-                    environment: "production"
-                }}
+                appData={appOne}
+                selectedGrants={appOne.grants?.map((x) => x.id) ?? []}
+                imageDownloaded={appOne.client_icon_url}
             />
-            <Delete
+
+            <CommonModal
                 isOpen={isDeleteOpen}
                 onClose={onDeleteClose}
+                title={
+                    <div className="flex items-center gap-2">
+                        <AlertTriangle className="w-5 h-5 text-danger" />
+                        Confirmar eliminación
+                    </div>}
+                body={
+                    <p className="text-default-500">
+                        ¿Estás seguro de que deseas eliminar la aplicación{" "}
+                        <span className="font-semibold text-foreground">{appOne.app_name}</span>? Esta acción no se puede
+                        deshacer y se revocarán todas las credenciales asociadas.
+                    </p>
+                }
+                footer={
+                    <>
+                        <Button variant="light" onPress={onDeleteClose}>
+                            Cancelar
+                        </Button>
+                        <Button color="danger" >
+                            Eliminar permanentemente
+                        </Button>
+                    </>
+                }
             />
         </div>
     )

@@ -1,88 +1,121 @@
 "use client"
 
-import { useState } from "react"
-import {
-  Button,
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  Input,
-  Tooltip,
-  Divider,
-  CheckboxGroup,
-  Checkbox,
-} from "@heroui/react"
-import { Plus, CheckCircle, Copy, Globe, Lock, Key, Clock, Zap, Shield, EyeOff, Eye } from "lucide-react"
+import { useState, useCallback } from "react"
+import { Select, SelectItem } from "@heroui/react";
+import { Button, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Input, Tooltip, Divider } from "@heroui/react"
+import { X, Plus, CheckCircle, Copy, Globe, EyeOff, Eye, Smartphone, Monitor, ImageIcon } from "lucide-react";
+import { clientApp } from "@/types"
 
-interface ApplicationData {
-  name: string
-  description: string
-  environment: "development" | "staging" | "production"
-  redirectUris: string[]
-  scopes: string[]
-  grants: GrantType[]
-}
+import { createUser } from "@/actions/createUser"
+import GrantsCheck from "../Common/GrantsCheck";
 
-type GrantType = "authorization_code" | "client_credentials" | "password" | "refresh_token" | "implicit"
 
-const availableGrants: { value: GrantType; label: string; description: string; icon: any }[] = [
+
+const appTypes = [
   {
-    value: "authorization_code",
-    label: "Authorization Code",
-    description: "Para aplicaciones web con backend seguro",
-    icon: Globe,
+    label: "Aplicación Web",
+    value: "web",
+    description: "SPA, Aplicaciones web tradicionales",
+    icon: <Globe className="w-4 h-4 text-blue-600" />
   },
   {
-    value: "client_credentials",
-    label: "Client Credentials",
-    description: "Para comunicación servidor a servidor",
-    icon: Lock,
+    label: "Aplicación Mobil",
+    value: "mobil",
+    description: "iOS, Android, React Native",
+    icon: <Smartphone className="w-4 h-4 text-green-600" />
   },
   {
-    value: "password",
-    label: "Resource Owner Password",
-    description: "Para aplicaciones de confianza (no recomendado)",
-    icon: Key,
-  },
-  {
-    value: "refresh_token",
-    label: "Refresh Token",
-    description: "Para renovar tokens de acceso automáticamente",
-    icon: Clock,
-  },
-  {
-    value: "implicit",
-    label: "Implicit Grant",
-    description: "Para aplicaciones SPA (obsoleto)",
-    icon: Zap,
-  },
+    label: "Aplicación de Escritorio",
+    value: "desktop",
+    description: "Windows, macOS, Linux",
+    icon: <Monitor className="w-4 h-4 text-purple-600" />
+  }
 ]
 
 // Componente Modal para crear aplicación
 interface CreateApplicationModalProps {
   isOpen: boolean
   onClose: () => void
+  appData: clientApp | null
+  selectedGrants: Array<string>
+  imageDownloaded: string
 }
 
-function CreateApplicationModal({ isOpen, onClose }: CreateApplicationModalProps) {
-  const [formData, setFormData] = useState<ApplicationData>({
-    name: "",
-    description: "",
-    environment: "development",
-    redirectUris: [],
-    scopes: [],
-    grants: ["authorization_code"],
-  })
+function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imageDownloaded }: CreateApplicationModalProps) {
 
-  const [redirectUriInput, setRedirectUriInput] = useState("");
-  const [scopesInput, setScopesInput] = useState("");
+  const [formData, setFormData] = useState<clientApp | null>(appData);
+  const [iconFile, setIconFile] = useState<File | null>(null)
+  const [iconPreview, setIconPreview] = useState<string>(imageDownloaded)
+  const [isDragActive, setIsDragActive] = useState(false)
+  const [groupSelected, setGroupSelected] = useState<Array<string>>(selectedGrants);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [showSecret, setShowSecret] = useState(false);
+  const [errors, setErrors] = useState<{
+    name?: string
+    type?: string
+    redirectUris?: string
+    grants?: string
+    icon?: string
+  }>({})
+
+  const isValidUrl = (url: string): boolean => {
+    try {
+      const urlObj = new URL(url)
+      return urlObj.protocol === "http:" || urlObj.protocol === "https:"
+    } catch {
+      return false
+    }
+  }
+
+  const validateForm = (): boolean => {
+    const newErrors: typeof errors = {}
+
+    // Validar nombre
+    if (!formData?.app_name?.trim()) {
+      newErrors.name = "El nombre de la aplicación es requerido"
+    }
+
+    // Validar tipo
+    if (!formData?.app_type) {
+      newErrors.type = "Debes seleccionar un tipo de aplicación"
+    }
+    if (!formData?.redirect_callback) {
+      newErrors.redirectUris = "Debes agregar al menos una Redirect URI"
+    } else {
+      if (!isValidUrl(formData.redirect_callback)) {
+        newErrors.redirectUris = "URL no valida"
+      }
+    }
+
+    // Validar grants
+    if (groupSelected?.length === 0) {
+      newErrors.grants = "Debes seleccionar al menos un OAuth Grant"
+    }
+
+    // Validar icono
+    if (!iconPreview) {
+      newErrors.icon = "El icono de la aplicación es requerido"
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    const file = acceptedFiles[0]
+    if (file && file.type.startsWith("image/")) {
+      setIconFile(file)
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setIconPreview(e.target?.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }, [])
 
 
-  const isFormValid = formData.name.trim() !== "" && formData.grants.length > 0
+
+
 
 
   const handleCopy = async (text: string, field: string) => {
@@ -95,6 +128,72 @@ function CreateApplicationModal({ isOpen, onClose }: CreateApplicationModalProps
     }
   }
 
+  const handleSubmit = async () => {
+    validateForm();
+    console.log(groupSelected);
+    console.log(await createUser(formData))
+  };
+
+  const handleSelectionChange = (e: any) => {
+    setFormData(prev => ({
+      ...prev!,
+      app_type: e.target.value,
+    }));
+  };
+
+  const handlerChange = (e: React.ChangeEvent<HTMLFormElement>) => {
+    const target = e.target as unknown as HTMLInputElement;
+    const { name, value } = target;
+
+    if (name) {
+      setFormData(prev => ({
+        ...prev!,
+        [name]: value,
+      }));
+    }
+
+  }
+
+  const onDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragActive(true)
+  }, [])
+
+  const onDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragActive(false)
+  }, [])
+
+  const onDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }, [])
+
+  const onDropHandler = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      setIsDragActive(false)
+
+      const files = Array.from(e.dataTransfer.files)
+      onDrop(files)
+    },
+    [onDrop],
+  )
+  const handleFileInput = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files
+    if (files) {
+      onDrop(Array.from(files))
+    }
+  }
+
+  const removeIcon = () => {
+    setIconFile(null)
+    setIconPreview("")
+  }
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="4xl" scrollBehavior="inside">
       <ModalContent>
@@ -105,152 +204,266 @@ function CreateApplicationModal({ isOpen, onClose }: CreateApplicationModalProps
           </div>
         </ModalHeader>
         <ModalBody>
-          <div className="space-y-6">
-            {/* Información básica */}
-            <div className="space-y-4">
-              <h4 className="text-lg font-semibold text-foreground">Información Básica</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input
-                  label="Nombre de la aplicación"
-                  placeholder="Mi Aplicación Web"
-                  size="sm"
-                  variant="bordered"
-                  isRequired
-                />
-              </div>
-              <Input
-                label="Descripción"
-                placeholder="Aplicación web para gestión de usuarios..."
-                variant="bordered"
-              />
-              <div>
-                <label className="text-sm font-medium text-default-500 mb-2 block">Client ID</label>
-                <div className="flex gap-2">
-                  <Input
-                    value="BNB4383BG843BF893HG349N"
-                    isReadOnly
-                    readOnly
-                    size="md"
-                    classNames={{
-                      input: "font-mono text-sm",
-                    }}
-                  />
-                  <Tooltip content={copiedField === "clientId" ? "¡Copiado!" : "Copiar Client ID"}>
-                    <Button
-                      isIconOnly
-                      variant="flat"
-                      onPress={() => handleCopy("BNB4383BG843BF893HG349N", "clientId")}
-                      className={`${copiedField === "clientId"
-                        ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
-                        : "bg-default-100 dark:bg-default-800"
-                        }`}
-                    >
-                      {copiedField === "clientId" ? (
-                        <CheckCircle className="w-4 h-4" />
-                      ) : (
-                        <Copy className="w-4 h-4" />
-                      )}
-                    </Button>
-                  </Tooltip>
-                </div>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-default-500 mb-2 block">Client Secret</label>
-                <div className="flex gap-2">
-                  <Input
-                    size="md"
-                    value={showSecret ? "GB45CT34YBUE56BUV54CT4554EC" : "•".repeat("GB45CT34YBUE56BUV54CT4554EC".length)}
-                    isReadOnly
-                    readOnly
-                    classNames={{
-                      input: "font-mono text-sm",
-                    }}
-                    endContent={
-                      <Button isIconOnly variant="light" size="sm" onPress={() => setShowSecret(!showSecret)}>
-                        {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </Button>
-                    }
-                  />
-                  <Tooltip content={copiedField === "clientSecret" ? "¡Copiado!" : "Copiar Client Secret"}>
-                    <Button
-                      isIconOnly
-                      variant="light"
-                      onPress={() => handleCopy("GB45CT34YBUE56BUV54CT4554EC", "clientSecret")}
-                      className={`${copiedField === "clientSecret"
-                        ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
-                        : "bg-default-100 dark:bg-default-800"
-                        }`}
-                    >
-                      {copiedField === "clientSecret" ? (
-                        <CheckCircle className="w-4 h-4" />
-                      ) : (
-                        <Copy className="w-4 h-4" />
-                      )}
-                    </Button>
-                  </Tooltip>
-                </div></div>
-            </div>
 
+          <div className="space-y-6">
+            <form onChange={handlerChange}>
+              {/* Información básica */}
+              <div className="space-y-4">
+                <h4 className="text-lg font-semibold text-foreground">Información Básica</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input
+                    defaultValue={formData?.app_name}
+                    aria-label=""
+                    name="app_name"
+                    label="Nombre de la aplicación"
+                    size="sm"
+                    errorMessage={errors.name}
+                    variant="bordered"
+                    isRequired
+                    isInvalid={!!errors.name}
+                  />
+                  {!appData && (<div className="space-y-2">
+                    <Select
+                      aria-label="1"
+                      classNames={{
+                        base: "max-w-xs",
+                        trigger: "h-12",
+                      }}
+                      items={appTypes}
+                      onChange={handleSelectionChange}
+                      isInvalid={!!errors.type}
+                      errorMessage={errors.type}
+                      labelPlacement="outside"
+                      placeholder="Tipo de aplicación"
+                      renderValue={(items) => {
+                        return items.map((item) => (
+                          <div key={item.key} className="flex items-center gap-2">
+                            {item.data?.icon}
+                            <div className="flex flex-col">
+                              <span>{item.data?.label}</span>
+                            </div>
+                          </div>
+                        ));
+                      }}
+                    >
+                      {(user) => (
+                        <SelectItem key={user.value} textValue={user.label}>
+                          <div className="flex gap-2 items-center">
+                            {user.icon}
+                            <div className="flex flex-col">
+                              <span className="text-small">{user.label}</span>
+                              <span className="text-tiny text-default-400">{user.description}</span>
+                            </div>
+                          </div>
+                        </SelectItem>
+                      )}
+                    </Select>
+                  </div>)}
+
+                </div>
+                <Input
+                  label="Descripción"
+                  defaultValue={formData?.description}
+                  aria-label=""
+                  name="description"
+                  placeholder="Aplicación web para gestión de usuarios..."
+                  variant="bordered"
+                />
+                {/* Drop Zone para Icono */}
+                <div className="space-y-3">
+                  <label className="text-sm font-medium text-foreground">Icono de la aplicación {errors.icon && <span className="text-danger text-xs ml-2">{errors.icon}</span>}</label>
+                  <div
+                    className={`relative border-2 border-dashed rounded-xl p-8 transition-all duration-200 ${isDragActive
+                      ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                      : "border-default-300 dark:border-default-600 hover:border-blue-400 hover:bg-default-50 dark:hover:bg-default-900/30"
+                      }`}
+                    onDragEnter={onDragEnter}
+                    onDragLeave={onDragLeave}
+                    onDragOver={onDragOver}
+                    onDrop={onDropHandler}
+                  >
+                    {iconPreview ? (
+                      <div className="flex items-center justify-center gap-4">
+                        <img
+                          src={iconPreview || "/placeholder.svg"}
+                          alt="Preview"
+                          className="w-16 h-16 rounded-xl object-cover shadow-md"
+                        />
+                        <div className="flex-1 text-left">
+                          <p className="font-medium text-foreground">{iconFile?.name}</p>
+                          <p className="text-sm text-default-500">{iconFile && (iconFile.size / 1024).toFixed(1)} KB</p>
+                        </div>
+                        {!appData && (
+                          <Button
+                            isIconOnly
+                            size="sm"
+                            variant="flat"
+                            color="danger"
+                            disabled={appData === null ? false : true}
+                            onPress={removeIcon}
+                            className="hover:bg-danger-100 dark:hover:bg-danger-900/30"
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        )}
+                        {appData && (
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleFileInput}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          />
+                        )}
+
+
+                      </div>
+                    ) : (
+                      <div className="text-center">
+                        <div className="w-16 h-16 rounded-xl bg-default-100 dark:bg-default-800 flex items-center justify-center mx-auto mb-4">
+                          <ImageIcon className="w-8 h-8 text-default-400" />
+                        </div>
+                        <div className="space-y-2">
+                          <p className="font-medium text-foreground">
+                            {isDragActive ? "Suelta la imagen aquí" : "Arrastra una imagen o haz clic para seleccionar"}
+                          </p>
+                          <p className="text-sm text-default-500">PNG, JPG, GIF hasta 2MB</p>
+                        </div>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleFileInput}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {!appData && (<div>
+                  <div className="flex gap-2">
+                    <Input
+                      defaultValue={formData?.client_id}
+                      name="client_id"
+                      label="Client ID"
+                      isReadOnly
+                      readOnly
+                      size="sm"
+                      classNames={{
+                        input: "font-mono text-sm",
+                      }}
+                    />
+                    <Tooltip content={copiedField === "clientId" ? "¡Copiado!" : "Copiar Client ID"}>
+                      <Button
+                        isIconOnly
+                        variant="flat"
+                        disabled={formData?.client_id ? false : true}
+                        onPress={() => handleCopy(formData?.client_id ?? "", "clientId")}
+                        className={`${copiedField === "clientId"
+                          ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
+                          : "bg-default-100"
+                          }`}
+                      >
+                        {copiedField === "clientId" ? (
+                          <CheckCircle className="w-4 h-4" />
+                        ) : (
+                          <Copy className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </Tooltip>
+                  </div>
+                </div>)}
+                {!appData && (<div>
+                  <div className="flex gap-2">
+                    <Input
+                      size="sm"
+                      defaultValue={formData?.client_secret}
+                      name="client_secret"
+                      label="Client Secret"
+                      value={showSecret ? formData?.client_secret : "•".repeat(formData?.client_secret?.length || 0)}
+                      isReadOnly
+                      readOnly
+                      classNames={{
+                        input: "font-mono text-sm",
+                      }}
+                      endContent={
+                        <Button isIconOnly variant="light" size="sm" onPress={() => setShowSecret(!showSecret)}>
+                          {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </Button>
+                      }
+                    />
+                    <Tooltip content={copiedField === "clientSecret" ? "¡Copiado!" : "Copiar Client Secret"}>
+                      <Button
+                        isIconOnly
+                        variant="light"
+                        disabled={formData?.client_secret ? false : true}
+                        onPress={() => handleCopy(formData?.client_secret ?? "", "clientSecret")}
+                        className={`${copiedField === "clientSecret"
+                          ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
+                          : "bg-default-100"
+                          }`}
+                      >
+                        {copiedField === "clientSecret" ? (
+                          <CheckCircle className="w-4 h-4" />
+                        ) : (
+                          <Copy className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </Tooltip>
+                  </div>
+                </div>)}
+
+              </div>
+            </form>
             <Divider />
 
             {/* OAuth Grants */}
-            <div className="space-y-4">
-              <h4 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                <Shield className="w-5 h-5" />
-                OAuth Grants
-              </h4>
-              <p className="text-sm text-default-500">
-                Selecciona los tipos de grants que tu aplicación necesita. Cada grant tiene diferentes casos de uso.
-              </p>
-              <CheckboxGroup
-                value={formData.grants}
-                onValueChange={(value) => setFormData((prev) => ({ ...prev, grants: value as GrantType[] }))}
-                classNames={{
-                  wrapper: "gap-4",
-                }}
-              >
-                {availableGrants.map((grant) => (
-                  <Checkbox key={grant.value} value={grant.value} classNames={{ wrapper: "mr-3" }}>
-                    <div className="flex items-start gap-3">
-                      <grant.icon className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-                      <div>
-                        <p className="font-medium text-foreground">{grant.label}</p>
-                        <p className="text-sm text-default-500">{grant.description}</p>
-                      </div>
-                    </div>
-                  </Checkbox>
-                ))}
-              </CheckboxGroup>
-            </div>
+
+            {!appData && (
+              <GrantsCheck
+                selectedGrants={groupSelected}
+                operationType="CREATE"
+                errorMsg={errors?.grants ?? null}
+                setGroupSelected={setGroupSelected}
+              />
+            )}
+
 
             <Divider />
 
             {/* Configuración OAuth */}
             <div className="space-y-4">
               <h4 className="text-lg font-semibold text-foreground">Configuración OAuth</h4>
-              <div className="grid grid-cols-1 gap-4">
-                <div>
-                  <Input
-                    label="Redirect URI"
-                    placeholder="https://miapp.com/callback&#10;https://miapp.com/auth"
-                    value={redirectUriInput}
-                    onValueChange={setRedirectUriInput}
-                    variant="bordered"
-                    type="textarea"
-                  />
+              <form onChange={handlerChange}>
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <Input
+                      aria-label=""
+                      label="Redirect URI"
+                      name="redirect_callback"
+                      variant="bordered"
+                      type="textarea"
+                      required
+                      defaultValue={formData?.redirect_callback}
+                      isInvalid={!!errors.redirectUris}
+                      errorMessage={errors.redirectUris}
+                    />
+                  </div>
+                  {/**
+                   * <div>
+                    <Input
+                      label="Scopes"
+                      placeholder="read, write, admin"
+                      value={scopesInput}
+                      onValueChange={setScopesInput}
+                      variant="bordered"
+                    />
+                  </div>
+                   */}
+
                 </div>
-                <div>
-                  <Input
-                    label="Scopes"
-                    placeholder="read, write, admin"
-                    value={scopesInput}
-                    onValueChange={setScopesInput}
-                    variant="bordered"
-                  />
-                </div>
-              </div>
+              </form>
             </div>
           </div>
+
         </ModalBody>
         <ModalFooter>
           <Button variant="light" onPress={onClose}>
@@ -258,9 +471,10 @@ function CreateApplicationModal({ isOpen, onClose }: CreateApplicationModalProps
           </Button>
           <Button
             color="primary"
+            onPress={handleSubmit}
             className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white"
           >
-            Crear Aplicación
+            {appData === null ? "Crear" : "Actualizar"} Aplicación
           </Button>
         </ModalFooter>
       </ModalContent>

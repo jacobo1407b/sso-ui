@@ -17,6 +17,8 @@ import {
     BarChart3,
 } from "lucide-react";
 
+import UserManagementHeader from "../Common/UserManagementHeader";
+
 const stats = {
     users: {
         total: 1247,
@@ -91,27 +93,10 @@ export default function index() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold text-foreground">Panel de Control</h1>
-                    <p className="text-default-500 mt-1">Resumen general del sistema y actividad reciente</p>
-                </div>
-                <div className="flex gap-2">
-                    <Button
-                        variant="flat"
-                        startContent={<BarChart3 className="w-4 h-4" />}
-                        className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-                    >
-                        Ver Reportes
-                    </Button>
-                    <Button
-                        className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold rounded-xl px-6"
-                        startContent={<Plus className="w-4 h-4" />}
-                    >
-                        Acción Rápida
-                    </Button>
-                </div>
-            </div>
+            <UserManagementHeader
+                subtitle="Resumen general del sistema y actividad reciente"
+                title="Panel de Control" />
+
 
             {/* Stats principales */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
