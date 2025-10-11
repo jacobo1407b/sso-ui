@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 
 
-const nextConfig = {
+/*const nextConfig = {
   swcMinify: false, // Desactiva la minificación con SWC
 
   webpack(config) {
@@ -12,8 +12,8 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
-
-/*const nextConfig = {};
-
 module.exports = nextConfig;*/
+
+const nextConfig = {};
+
+module.exports = nextConfig;

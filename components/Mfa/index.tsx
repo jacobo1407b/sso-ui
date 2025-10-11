@@ -123,7 +123,7 @@ export default function MfaVerification({
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-4">
-      <Card className="w-full max-w-md shadow-2xl border-0 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm">
+      <Card className="w-full max-w-md shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
         <CardHeader className="flex flex-col gap-4 pb-2 pt-8">
           {/* Logo y botón de regreso */}
 
