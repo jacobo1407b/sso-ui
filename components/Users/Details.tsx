@@ -17,9 +17,10 @@ import Link from 'next/link';
 
 interface iDetailsUserProps {
     user: UserData
-    userKey: string
+    userKey: string,
+    rols: Array<string>
 }
-function DetailsUser({ user, userKey }: iDetailsUserProps) {
+function DetailsUser({ user, userKey, rols }: iDetailsUserProps) {
     const router = useRouter();
     const [isDragActive, setIsDragActive] = useState(false);
     const [userProfile, setuserProfile] = useState(user.profile_picture);
@@ -75,7 +76,6 @@ function DetailsUser({ user, userKey }: iDetailsUserProps) {
                 if (user) {
                     //setUser({ ...user, avatar: newAvatar })
                     setuserProfile(newAvatar);
-                    console.log("Avatar actualizado:", file.name)
                     // Aquí enviarías la imagen al backend
                 }
             }
@@ -99,7 +99,7 @@ function DetailsUser({ user, userKey }: iDetailsUserProps) {
                         >
                             Editar
                         </Button>
-                        {userKey !== "1" ? (
+                        {userKey === "false" ? (
                             <Button onPress={onDeleteOpen} color="danger" variant="flat" startContent={<Trash2 className="w-4 h-4" />}>
                                 Eliminar
                             </Button>
@@ -138,12 +138,15 @@ function DetailsUser({ user, userKey }: iDetailsUserProps) {
                                     )}
 
                                     {/* Overlay de hover */}
-                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-                                        <div className="text-center text-white">
-                                            <Upload className="w-6 h-6 mx-auto mb-1" />
-                                            <span className="text-xs font-medium">Cambiar foto</span>
+                                    {userKey === "1" && (
+                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+                                            <div className="text-center text-white">
+                                                <Upload className="w-6 h-6 mx-auto mb-1" />
+                                                <span className="text-xs font-medium">Cambiar foto</span>
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
+
 
                                     {/* Indicador de drag activo */}
                                     {isDragActive && (
@@ -157,7 +160,12 @@ function DetailsUser({ user, userKey }: iDetailsUserProps) {
                                 </div>
 
                                 {/* Input file oculto */}
-                                <input id="avatar-upload" type="file" accept="image/*" onChange={handleFileInput} className="hidden" />
+                                {
+                                    userKey === "1" && (
+                                        <input id="avatar-upload" type="file" accept="image/*" onChange={handleFileInput} className="hidden" />
+                                    )
+                                }
+
 
                                 {/* Badge de estado */}
                                 <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-green-500 rounded-full border-4 border-white dark:border-slate-800 flex items-center justify-center shadow-lg">
@@ -165,8 +173,8 @@ function DetailsUser({ user, userKey }: iDetailsUserProps) {
                                 </div>
                             </div>
                             <div className="text-center md:text-left">
-                                <h2 className="text-2xl font-bold text-foreground">{user.name} {user.last_name}</h2>
-                                <p className="text-default-500 text-lg">{user.userBusiness.job_title}</p>
+                                <h2 className="text-2xl font-bold text-foreground">{user.name.split(" ")[0]} {user.last_name}</h2>
+                                <p className="text-default-500 text-lg">{user?.userBusiness?.job_title}</p>
                                 <div className="flex flex-wrap gap-2 mt-3 justify-center md:justify-start">
                                     {/*<Chip color={roleColorMap[user.role]} variant="flat" size="sm">
                                         {user.role === "admin" ? "Administrador" : user.role === "moderator" ? "Moderador" : "Usuario"}
@@ -190,24 +198,34 @@ function DetailsUser({ user, userKey }: iDetailsUserProps) {
                                         Información de Contacto
                                     </h3>
                                     <div className="space-y-3">
-                                        <div className="flex items-center gap-3">
-                                            <Mail className="w-4 h-4 text-default-500" />
-                                            <span className="text-foreground">{user.email}</span>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <Phone className="w-4 h-4 text-default-500" />
-                                            <span className="text-foreground">{user.phone}</span>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <MapPin className="w-4 h-4 text-default-500" />
-                                            <span className="text-foreground">{user.location.city}</span>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <Calendar className="w-4 h-4 text-default-500" />
-                                            <span className="text-foreground">
-                                                Miembro desde {new Date(user.userBusiness.hire_date).toLocaleDateString("es-ES")}
-                                            </span>
-                                        </div>
+
+                                        {user.email && (
+                                            <div className="flex items-center gap-3">
+                                                <Mail className="w-4 h-4 text-default-500" />
+                                                <span className="text-foreground">{user.email}</span>
+                                            </div>
+                                        )}
+                                        {user.phone && (
+                                            <div className="flex items-center gap-3">
+                                                <Phone className="w-4 h-4 text-default-500" />
+                                                <span className="text-foreground">{user.phone}</span>
+                                            </div>
+                                        )}
+                                        {user.location.city && (
+                                            <div className="flex items-center gap-3">
+                                                <MapPin className="w-4 h-4 text-default-500" />
+                                                <span className="text-foreground">{user?.location?.city}</span>
+                                            </div>
+                                        )}
+
+                                        {user?.userBusiness?.hire_date && (
+                                            <div className="flex items-center gap-3">
+                                                <Calendar className="w-4 h-4 text-default-500" />
+                                                <span className="text-foreground">
+                                                    Miembro desde {new Date(user?.userBusiness?.hire_date).toLocaleDateString("es-ES")}
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
@@ -238,12 +256,12 @@ function DetailsUser({ user, userKey }: iDetailsUserProps) {
                                         <div className="flex items-center gap-3">
                                             <Clock className="w-4 h-4 text-default-500" />
                                             <span className="text-foreground">
-                                                Último acceso: {new Date(user.last_login).toLocaleString("es-ES")}
+                                                Último acceso: {user.last_login ? new Date(user.last_login).toLocaleString("es-ES") : 'No se ha iniciado sesión'}
                                             </span>
                                         </div>
                                         <div className="flex items-center gap-3">
                                             <Activity className="w-4 h-4 text-default-500" />
-                                            <span className="text-foreground">{20} inicios de sesión</span>
+                                            <span className="text-foreground">{user.sessions} inicios de sesión</span>
                                         </div>
                                     </div>
                                 </div>
@@ -281,14 +299,11 @@ function DetailsUser({ user, userKey }: iDetailsUserProps) {
                                             Permisos
                                         </h3>
                                         <div className="flex flex-wrap gap-2">
-
-                                            <Chip key="Usuario" variant="flat" size="sm" className="bg-blue-50 dark:bg-blue-900/30">
-                                                Usuario
-                                            </Chip>
-                                            <Chip key="sso" variant="flat" size="sm" className="bg-blue-50 dark:bg-blue-900/30">
-                                                SSO Admin
-                                            </Chip>
-
+                                            {rols.map((x) => (
+                                                <Chip key={x} variant="flat" size="sm" className="bg-blue-50 dark:bg-blue-900/30">
+                                                    {x}
+                                                </Chip>
+                                            ))}
                                         </div>
                                     </div>
 
@@ -362,6 +377,7 @@ function DetailsUser({ user, userKey }: iDetailsUserProps) {
                 }}
                 user={user}
                 operation='UPDATE'
+                userId={user.user_id}
             />
             <CommonModal
                 isOpen={isDeleteOpen}

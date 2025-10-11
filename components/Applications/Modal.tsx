@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { Select, SelectItem } from "@heroui/react";
-import { Button, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Input, Tooltip, Divider } from "@heroui/react"
+import { Button, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Input, Tooltip, Divider, addToast } from "@heroui/react"
 import { X, Plus, CheckCircle, Copy, Globe, EyeOff, Eye, Smartphone, Monitor, ImageIcon } from "lucide-react";
-import { clientApp } from "@/types"
+import { clientApp, Grant } from "@/types"
 
-import { createUser } from "@/actions/createUser"
+import { createClient, updateAppAction } from "@/actions/clientAction";
 import GrantsCheck from "../Common/GrantsCheck";
 
 
@@ -39,11 +39,17 @@ interface CreateApplicationModalProps {
   appData: clientApp | null
   selectedGrants: Array<string>
   imageDownloaded: string
+  listGrants: Array<Grant>
 }
 
-function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imageDownloaded }: CreateApplicationModalProps) {
+function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imageDownloaded, listGrants }: CreateApplicationModalProps) {
+  useEffect(() => {
+    setFormData(appData);
+    setGroupSelected(selectedGrants)
+  }, [appData]);
 
   const [formData, setFormData] = useState<clientApp | null>(appData);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [iconFile, setIconFile] = useState<File | null>(null)
   const [iconPreview, setIconPreview] = useState<string>(imageDownloaded)
   const [isDragActive, setIsDragActive] = useState(false)
@@ -56,8 +62,15 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
     redirectUris?: string
     grants?: string
     icon?: string
-  }>({})
+  }>({});
 
+  const handlerClose = () => {
+    onClose();
+    //setFormData(null);
+    //setIconFile(null);
+    //setIconPreview("");
+    //setGroupSelected([]);
+  }
   const isValidUrl = (url: string): boolean => {
     try {
       const urlObj = new URL(url)
@@ -96,7 +109,6 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
     if (!iconPreview) {
       newErrors.icon = "El icono de la aplicación es requerido"
     }
-
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -129,9 +141,34 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
   }
 
   const handleSubmit = async () => {
-    validateForm();
-    console.log(groupSelected);
-    console.log(await createUser(formData))
+    try {
+      if (validateForm()) {
+        setIsLoading(true);
+        const resp = appData === null ? await createClient(formData, groupSelected) : await updateAppAction({
+          description: formData?.description,
+          redirect_callback: formData?.redirect_callback,
+          scopes: formData?.scopes
+        }, formData?.client_id ?? "");
+        if (resp.code !== 201) throw new Error(resp.name);
+        setFormData(prev => ({
+          ...prev!,
+          client_id: resp.data.client_id,
+          client_secret: resp.data.client_secret
+        }));
+        addToast({
+          title: `${appData === null ? 'Creado': "Actualizado"} correctamente`,
+          description: "",
+          color: "success",
+          variant: "solid"
+        });
+
+      }
+    } catch (error: any) {
+      console.log(error)
+    } finally {
+      setIsLoading(false);
+    }
+
   };
 
   const handleSelectionChange = (e: any) => {
@@ -195,24 +232,25 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="4xl" scrollBehavior="inside">
+    <Modal isOpen={isOpen} onClose={handlerClose} size="4xl" scrollBehavior="inside">
       <ModalContent>
         <ModalHeader className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
             <Plus className="w-5 h-5" />
-            Crear Nueva Aplicación OAuth
+            {appData === null ? "Crear Nueva" : "Actualizar"} Aplicación OAuth
           </div>
         </ModalHeader>
         <ModalBody>
 
           <div className="space-y-6">
-            <form onChange={handlerChange}>
+            <form onChange={handlerChange} id="clientForm">
               {/* Información básica */}
               <div className="space-y-4">
                 <h4 className="text-lg font-semibold text-foreground">Información Básica</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
-                    defaultValue={formData?.app_name}
+                    value={formData?.app_name}
+                    isDisabled={appData === null ? false : true}
                     aria-label=""
                     name="app_name"
                     label="Nombre de la aplicación"
@@ -263,7 +301,7 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
                 </div>
                 <Input
                   label="Descripción"
-                  defaultValue={formData?.description}
+                  value={formData?.description}
                   aria-label=""
                   name="description"
                   placeholder="Aplicación web para gestión de usuarios..."
@@ -341,11 +379,10 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
                 {!appData && (<div>
                   <div className="flex gap-2">
                     <Input
-                      defaultValue={formData?.client_id}
+                      value={formData?.client_id}
                       name="client_id"
                       label="Client ID"
                       isReadOnly
-                      readOnly
                       size="sm"
                       classNames={{
                         input: "font-mono text-sm",
@@ -375,12 +412,10 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
                   <div className="flex gap-2">
                     <Input
                       size="sm"
-                      defaultValue={formData?.client_secret}
                       name="client_secret"
                       label="Client Secret"
                       value={showSecret ? formData?.client_secret : "•".repeat(formData?.client_secret?.length || 0)}
                       isReadOnly
-                      readOnly
                       classNames={{
                         input: "font-mono text-sm",
                       }}
@@ -423,6 +458,7 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
                 operationType="CREATE"
                 errorMsg={errors?.grants ?? null}
                 setGroupSelected={setGroupSelected}
+                listGrants={listGrants}
               />
             )}
 
@@ -442,7 +478,7 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
                       variant="bordered"
                       type="textarea"
                       required
-                      defaultValue={formData?.redirect_callback}
+                      value={formData?.redirect_callback}
                       isInvalid={!!errors.redirectUris}
                       errorMessage={errors.redirectUris}
                     />
@@ -466,11 +502,13 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
 
         </ModalBody>
         <ModalFooter>
-          <Button variant="light" onPress={onClose}>
+          <Button variant="light" onPress={handlerClose}>
             Cancelar
           </Button>
           <Button
             color="primary"
+            isLoading={isLoading}
+            isDisabled={appData === null && formData?.client_id !== ""}
             onPress={handleSubmit}
             className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white"
           >

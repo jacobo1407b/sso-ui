@@ -7,6 +7,7 @@ import { UserPlus, Eye, RotateCcwKey, Trash2, AlertTriangle } from "lucide-react
 
 import CommonModal from '@/components/Common/CommonModal'
 import UserModal from "./Modal";
+import { formateaFechaRelativa } from "@/utils";
 
 import ResetPass from "./ResetPass";
 
@@ -14,65 +15,49 @@ import UserManagementHeader from "../Common/UserManagementHeader";
 import ReusableTableCard from "../Common/CommonTable";
 import { UserData } from "@/types";
 
-const mockUsers = [
-  {
-    user_id: "usr_001",
-    username: "jacobo.hernandez",
-    name: "Jacobo",
-    last_name: "Hernández",
-    second_last_name: "Mendieta",
-    email: "jacobo@example.com",
-    phone: "+52 55 1234 5678",
-    profile_picture: "https://randomuser.me/api/portraits/men/32.jpg",
-    status: "active",
-    last_login: "2025-08-23T14:00:00Z",
-    userBusiness: {
-      job_title: "Consultor tecnico"
-    }
-  },
-  {
-    user_id: "usr_002",
-    username: "mariana.lopez",
-    name: "Mariana",
-    last_name: "López",
-    second_last_name: "Ramírez",
-    email: "mariana@example.com",
-    phone: "+52 55 9876 5432",
-    profile_picture: "https://randomuser.me/api/portraits/women/11.jpg",
-    status: "inactive",
-    last_login: "2025-07-15T09:30:00Z",
-    userBusiness: {
-      job_title: "Consultor funcional"
-    }
-  },
-  {
-    user_id: "usr_003",
-    username: "carlos.torres",
-    name: "Carlos",
-    last_name: "Torres",
-    second_last_name: "Gómez",
-    email: "carlos@example.com",
-    phone: "+52 55 1122 3344",
-    profile_picture: "https://randomuser.me/api/portraits/men/49.jpg",
-    status: "active",
-    last_login: "2025-09-10T18:45:00Z",
-    userBusiness: {
-      job_title: "Compras"
-    }
-  }
-];
 
 
-export default function Users() {
+interface iUsersProps {
+  users: Array<usersList>,
+  page: number,
+  pageSize: number,
+  totalCount: number
+}
+interface usersList {
+  user_id: string
+  username: string
+  name: string
+  last_name: string
+  second_last_name: string
+  email: string
+  phone: string
+  profile_picture: string
+  status: string
+  last_login: string
+  userBusiness: UserBusiness
+}
+
+interface UserBusiness {
+  job_title: string
+}
+
+
+export default function Users(artifact: iUsersProps) {
 
   const { isOpen: isCreateOpen, onOpen: onCreateOpen, onClose: onCreateClose } = useDisclosure();
-  const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
+  //const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
   const { isOpen: isResetOpen, onOpen: onResetOpen, onClose: onResetClose } = useDisclosure();
-  const [currentUser, setcurrentUser] = useState<UserData | null>(null)
+  const [currentUser, setcurrentUser] = useState<UserData | null>(null);
+  const [userId, setUserId] = useState("");
 
-  const handlerDeteleUser = (user: any) => {
+  /*const handlerDeteleUser = (user: any) => {
     setcurrentUser(user)
     onDeleteOpen();
+  }*/
+
+  const handlerReset = (userId: string) => {
+    setUserId(userId);
+    onResetOpen()
   }
   return (
     <div className="flex flex-col gap-4">
@@ -91,7 +76,7 @@ export default function Users() {
           { key: "actions", label: "ACCIONES" },
         ]}
         //https://i.pravatar.cc/150?u=a042581f4e29026024d
-        data={mockUsers}
+        data={artifact.users}
         rowKey={(row) => row.user_id}
         renderRow={(row) => [
           <User
@@ -102,12 +87,12 @@ export default function Users() {
             name={row.name}
             description={row.email}
           />,
-          <p className="text-bold text-sm capitalize">{row.userBusiness.job_title}</p>,
+          <p className="text-bold text-sm capitalize">{row?.userBusiness?.job_title}</p>,
           <p className="text-bold text-sm capitalize text-default-400">{row.phone}</p>,
           <Chip className="capitalize" color="success" size="sm" variant="flat">
             {row.status}
           </Chip>,
-          <p className="text-bold text-sm capitalize">{row.last_login}</p>,
+          <p className="text-bold text-sm capitalize">{formateaFechaRelativa(row.last_login)}</p>,
           <div className="relative flex items-center gap-2">
             <Tooltip content="Details">
               <Link href={`/users/${row.user_id}`} className="text-lg text-default-400 cursor-pointer active:opacity-50">
@@ -115,23 +100,26 @@ export default function Users() {
               </Link>
             </Tooltip>
             <Tooltip content="reset password">
-              <span onClick={onResetOpen} className="text-lg text-default-400 cursor-pointer active:opacity-50">
+              <span onClick={() => handlerReset(row.user_id)} className="text-lg text-default-400 cursor-pointer active:opacity-50">
                 <RotateCcwKey />
               </span>
             </Tooltip>
-            <Tooltip color="danger" content="Delete user">
-              <span onClick={() => handlerDeteleUser(row)} className="text-lg text-danger cursor-pointer active:opacity-50">
-                <Trash2 />
-              </span>
-            </Tooltip>
+            {/*row.name == "false" && (
+              <Tooltip color="danger" content="Delete user">
+                <span onClick={() => handlerDeteleUser(row)} className="text-lg text-danger cursor-pointer active:opacity-50">
+                  <Trash2 />
+                </span>
+              </Tooltip>
+            )*/}
+
           </div>,
         ]}
         pagination={{
-          page: 1,
-          total: mockUsers.length,
+          page: artifact.page,
+          total: Math.ceil(artifact.totalCount / artifact.pageSize),
           onChange: (p) => console.log("Page:", p),
         }}
-        totalCount={20}
+        totalCount={artifact.totalCount}
         addButton={{
           label: "Nuevo Usuario",
           onClick: () => onCreateOpen(),
@@ -147,9 +135,11 @@ export default function Users() {
         }}
         operation="CREATE"
         user={null}
+        userId=""
       />
 
-      <CommonModal
+      {/**
+       * <CommonModal
         isOpen={isDeleteOpen}
         onClose={onDeleteClose}
         title={
@@ -168,11 +158,14 @@ export default function Users() {
           </>
         }
       />
+       */}
 
 
       <ResetPass
         isOpen={isResetOpen}
-        onClose={onResetClose} />
+        onClose={onResetClose}
+        userId={userId}
+      />
 
       {/* Modal de confirmación de eliminación 
       <Modal isOpen={isDeleteOpen} onClose={onDeleteClose}>

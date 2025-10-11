@@ -1,39 +1,24 @@
 import { Dispatch, SetStateAction } from "react";
 import { Shield, Globe, Lock, Key, Clock, Zap } from "lucide-react";
 import { CheckboxGroup, Checkbox } from "@heroui/react";
-type GrantType = "authorization_code" | "client_credentials" | "password" | "refresh_token" | "implicit"
+import { Grant } from "@/types";
 
 
-const availableGrants: { id: string; value: GrantType; label: string; description: string; icon: any }[] = [
-    {
-        id: "1",
-        value: "authorization_code",
-        label: "Authorization Code",
-        description: "Para aplicaciones web con backend seguro",
-        icon: Globe,
-    },
-    {
-        id: "2",
-        value: "client_credentials",
-        label: "Client Credentials",
-        description: "Para comunicación servidor a servidor",
-        icon: Lock,
-    },
-    {
-        id: "3",
-        value: "password",
-        label: "Resource Owner Password",
-        description: "Para aplicaciones de confianza (no recomendado)",
-        icon: Key,
-    },
-    {
-        id: "4",
-        value: "refresh_token",
-        label: "Refresh Token",
-        description: "Para renovar tokens de acceso automáticamente",
-        icon: Clock,
+function getIcon(icontext: string) {
+    switch (icontext) {
+        case "Globe":
+            return <Globe className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5"  />
+        case "Lock":
+            return <Lock className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+        case "Key":
+            return <Key className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5"  />
+        case "Clock":
+            return <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5"  />
+        default:
+            return "";
     }
-]
+}
+
 
 
 interface GrantsCheckProps {
@@ -41,13 +26,14 @@ interface GrantsCheckProps {
     operationType: "CREATE" | "UPDATE";
     errorMsg: string | null;
     setGroupSelected: Dispatch<SetStateAction<string[]>>
+    listGrants: Array<Grant>
 }
 
 
-export default function GrantsCheck({ selectedGrants, operationType, errorMsg, setGroupSelected }: GrantsCheckProps) {
+export default function GrantsCheck({ selectedGrants, operationType, errorMsg, setGroupSelected, listGrants }: GrantsCheckProps) {
     return (
         <div className="space-y-4">
-            {operationType ==="CREATE" && (
+            {operationType === "CREATE" && (
                 <h4 className="text-lg font-semibold text-foreground flex items-center gap-2">
                     <Shield className="w-5 h-5" />
                     OAuth Grants *{errorMsg && <span className="text-danger text-xs ml-2">{errorMsg}</span>}
@@ -65,12 +51,12 @@ export default function GrantsCheck({ selectedGrants, operationType, errorMsg, s
                     wrapper: "gap-4",
                 }}
             >
-                {availableGrants.map((grant) => (
+                {listGrants.map((grant) => (
                     <Checkbox key={grant.id} value={grant.id} classNames={{ wrapper: "mr-3" }}>
                         <div className="flex items-start gap-3">
-                            <grant.icon className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                            {getIcon(grant.icon_text)}
                             <div>
-                                <p className="font-medium text-foreground">{grant.label}</p>
+                                <p className="font-medium text-foreground">{grant.grants_name}</p>
                                 <p className="text-sm text-default-500">{grant.description}</p>
                             </div>
                         </div>

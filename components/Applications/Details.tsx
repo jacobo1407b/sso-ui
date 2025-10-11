@@ -4,17 +4,35 @@ import { useRouter } from 'next/navigation';
 import { Button, Card, CardBody, CardHeader, Tooltip, Input, Chip, Divider, useDisclosure } from "@heroui/react";
 import { ArrowLeft, Trash2, Settings, CheckCircle, Copy, EyeOff, Eye } from "lucide-react";
 import { Shield, Plus, Globe, Edit, AlertTriangle } from "lucide-react";
+import { Lock, Key, Clock } from "lucide-react";
 
 import Grants from "./Grants";
 import CommonModal from '@/components/Common/CommonModal';
 import Modal from "./Modal";
-import { clientApp } from "@/types";
+import { clientApp, Grant } from "@/types";
 
 
 interface iDetailsProps {
     appOne: clientApp
+    list: Array<Grant>
 }
-export default function DetailsApp({ appOne }: iDetailsProps) {
+
+function getIcon(icontext: string) {
+    switch (icontext) {
+        case "Globe":
+            return <Globe className="w-5 h-5 text-blue-600 dark:text-blue-400"  />
+        case "Lock":
+            return <Lock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+        case "Key":
+            return <Key className="w-5 h-5 text-blue-600 dark:text-blue-400"  />
+        case "Clock":
+            return <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400"  />
+        default:
+            return "";
+    }
+}
+
+export default function DetailsApp({ appOne, list }: iDetailsProps) {
 
     const router = useRouter();
 
@@ -25,9 +43,6 @@ export default function DetailsApp({ appOne }: iDetailsProps) {
     const [showSecret, setShowSecret] = useState(false);
     const [copiedField, setCopiedField] = useState<string | null>(null)
 
-    const handleSaveGrants = () => {
-
-    }
     const handleCopy = async (text: string, field: string) => {
         try {
             await navigator.clipboard.writeText(text)
@@ -56,13 +71,16 @@ export default function DetailsApp({ appOne }: iDetailsProps) {
                     </div>
                 </div>
                 <div className="flex gap-2">
-                    <Button
-                        color="danger"
-                        variant="flat"
-                        onPress={onDeleteOpen}
-                        startContent={<Trash2 className="w-4 h-4" />}>
-                        Eliminar
-                    </Button>
+                    {!appOne.is_active && (
+                        <Button
+                            color="danger"
+                            variant="flat"
+                            onPress={onDeleteOpen}
+                            startContent={<Trash2 className="w-4 h-4" />}>
+                            Eliminar
+                        </Button>
+                    )}
+
                     <Button
                         variant="flat"
                         startContent={<Edit className="w-4 h-4" />}
@@ -211,7 +229,8 @@ export default function DetailsApp({ appOne }: iDetailsProps) {
                                         key={x.id}
                                         className="flex items-center gap-3 p-3 rounded-lg bg-default-50"
                                     >
-                                        <Globe className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                                        {getIcon(x.icon_text)}
+
                                         <div className="flex-1">
                                             <p className="font-medium text-foreground">{x.grants_name}</p>
                                             <p className="text-sm text-default-500">{x.description}</p>
@@ -266,15 +285,17 @@ export default function DetailsApp({ appOne }: iDetailsProps) {
             <Grants
                 isOpen={isGrantsOpen}
                 onClose={onGrantsClose}
-                currentGrants={appOne.grants?.map((x) => x.id) ?? []}
-
+                currentGrants={appOne?.grants?.map((x) => x.id) ?? []}
+                listGrants={list}
+                client_id={appOne.client_id}
             />
             <Modal
                 isOpen={isEditOpen}
                 onClose={onEditClose}
                 appData={appOne}
-                selectedGrants={appOne.grants?.map((x) => x.id) ?? []}
+                selectedGrants={appOne?.grants?.map((x) => x.id) ?? []}
                 imageDownloaded={appOne.client_icon_url}
+                listGrants={list}
             />
 
             <CommonModal

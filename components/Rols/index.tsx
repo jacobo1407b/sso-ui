@@ -2,25 +2,19 @@
 
 import Link from "next/link";
 import { Tooltip } from "@heroui/react";
-import {  Eye } from "lucide-react";
+import { Eye } from "lucide-react";
 
 
 import UserManagementHeader from "../Common/UserManagementHeader";
 import ReusableTableCard from "../Common/CommonTable";
+import { ListRols } from "@/types";
 
 
-const rols = [
-  {
-    id: "1",
-    rol: "SSO admin",
-    descripcion: "Aplicacion principal SSO",
-    code: "SSO_ADMIN",
-    created: "system",
-    fecha: "07 Julio 2025"
-  },
-];
-
-function Rols() {
+interface iRolsProps {
+  rols: Array<ListRols>
+  totalPage: number
+}
+function Rols({ rols, totalPage }: iRolsProps) {
 
 
   return (
@@ -43,14 +37,14 @@ function Rols() {
         data={rols}
         rowKey={(row) => row.id}
         renderRow={(row) => [
-          row.rol,
-          row.descripcion,
-          row.code,
-          row.created,
-          row.fecha,
+          row.role_name,
+          row.description,
+          row.role_code,
+          new Date(row.created_date).toLocaleDateString("es-ES"),
+          row.created_by,
           <div className="relative flex items-center gap-2">
             <Tooltip content="Details">
-              <Link href="/rols/645634V6456G34F53" className="text-lg text-default-400 cursor-pointer active:opacity-50">
+              <Link href={`/rols/${row.id}`} className="text-lg text-default-400 cursor-pointer active:opacity-50">
                 <Eye />
               </Link>
             </Tooltip>
@@ -64,15 +58,15 @@ function Rols() {
                 <Trash2 />
               </span>
             </Tooltip>*/}
-            
+
           </div>
         ]}
         pagination={{
-          page: 5,
-          total: 50,
+          page: 1,
+          total: Math.ceil(totalPage / 20),
           onChange: (p) => console.log("Page:", p),
         }}
-        totalCount={20}
+        totalCount={totalPage}
       />
 
     </div>

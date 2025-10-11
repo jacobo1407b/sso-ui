@@ -2,33 +2,30 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { Card, CardBody, CardHeader } from "@heroui/card"
-import { Input } from "@heroui/input"
-import { Button } from "@heroui/button"
-import { Divider } from "@heroui/divider"
-import { Link } from "@heroui/link"
-import { Avatar } from "@heroui/avatar"
-import { Chip } from "@heroui/chip"
-import { Shield, ArrowLeft, AlertTriangle, CheckCircle, Clock, Smartphone, Key, Fingerprint } from "lucide-react"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Card, CardBody, CardHeader } from "@heroui/card";
+import { Input } from "@heroui/input";
+import { Button } from "@heroui/button";
+import { Avatar } from "@heroui/avatar";
+import { Shield, Smartphone, Key, Fingerprint } from "lucide-react";
+import { validateTotp } from "@/actions/preferencesAction";
+import { refreshMfa } from "@/actions/loginAction";
 
 interface MfaVerificationProps {
   userEmail?: string
   userName?: string
   userAvatar?: string
   availableMethods?: ("totp" | "webauthn" | "sms")[]
-  onVerificationSuccess?: () => void
-  onGoBack?: () => void
+  totp_id: string
 }
 
 export default function MfaVerification({
-  userEmail = "usuario@empresacorp.com",
-  userName = "Usuario",
-  userAvatar = "/placeholder.svg?height=80&width=80",
-  availableMethods = ["totp", "webauthn"],
-  onVerificationSuccess,
-  onGoBack,
+  userEmail,
+  userName,
+  userAvatar,
+  availableMethods,
+  totp_id
 }: MfaVerificationProps) {
   const router = useRouter()
   const [code, setCode] = useState("")
@@ -37,7 +34,7 @@ export default function MfaVerification({
   const [timeLeft, setTimeLeft] = useState(30)
   const [selectedMethod, setSelectedMethod] = useState<"totp" | "webauthn" | "sms">("totp")
   const [attempts, setAttempts] = useState(0)
-  const maxAttempts = 3
+  const maxAttempts = 5
 
   // Countdown timer para el código
   useEffect(() => {
@@ -72,23 +69,26 @@ export default function MfaVerification({
 
     try {
       // Simular llamada a API
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      const resp = await validateTotp(totp_id, code);
+      console.log(resp)
+      //cerrar session y mandar a loguin y limpiar el state if(resp.code === 401)
+      if (resp.code == 403 && resp.name === "ERR_2FA_TOTP") {
 
-      // Simular validación (en producción esto sería una llamada real al backend)
-      const isValidCode = code === "123456" // Código de prueba
-
-      if (isValidCode) {
-        // Éxito - redirigir al dashboard
-        if (onVerificationSuccess) {
-          onVerificationSuccess()
-        } else {
-          router.push("/")
-        }
-      } else {
         setAttempts(attempts + 1)
         setError(`Código incorrecto. ${maxAttempts - attempts - 1} intentos restantes.`)
         setCode("")
       }
+      if (resp.code === 403 && resp.name === "ERR_2FA_TOTP_MAX_ATTEMPTS" || resp.name === "ERR_2FA_TOTP_LOCKED") {
+        setAttempts(4)
+        setError(`Demasiados intentos fallidos: usuario bloqueado temporalmente`)
+        setCode("")
+      }
+
+      if (resp.code === 200) {
+        const rep = await refreshMfa();
+        router.push("/")
+      }
+
     } catch (err) {
       setError("Error de conexión. Inténtalo de nuevo.")
     } finally {
@@ -105,23 +105,13 @@ export default function MfaVerification({
       await new Promise((resolve) => setTimeout(resolve, 1500))
 
       // En producción aquí iría la lógica de WebAuthn
-      if (onVerificationSuccess) {
-        onVerificationSuccess()
-      } else {
-        router.push("/")
-      }
+
+      router.push("/")
+
     } catch (err) {
       setError("Error con la autenticación biométrica. Usa otro método.")
     } finally {
       setIsVerifying(false)
-    }
-  }
-
-  const handleGoBackToLogin = () => {
-    if (onGoBack) {
-      onGoBack()
-    } else {
-      router.push("/login")
     }
   }
 
@@ -142,7 +132,6 @@ export default function MfaVerification({
           <div className="text-center space-y-3">
             <Avatar src={userAvatar} size="lg" name={userName} className="mx-auto" />
             <div>
-              <h2 className="text-xl font-semibold text-foreground">{userName}</h2>
               <p className="text-sm text-default-500">{userEmail}</p>
             </div>
           </div>
@@ -157,10 +146,10 @@ export default function MfaVerification({
         <CardBody className="gap-6 px-8 pb-8">
           {/* Métodos disponibles */}
           <div className="flex gap-2 justify-center">
-            {availableMethods.map((method) => (
+            {(availableMethods?.length ?? 0) > 1 && availableMethods?.map((method) => (
               <Button
                 key={method}
-                disabled={method === "webauthn"? true : false}
+                disabled={method === "webauthn" ? true : false}
                 size="sm"
                 variant={selectedMethod === method ? "solid" : "flat"}
                 color={selectedMethod === method ? "primary" : "default"}
@@ -201,26 +190,16 @@ export default function MfaVerification({
                   startContent={<Key className="w-5 h-5 text-default-400" />}
                   classNames={{
                     input: "text-center text-2xl font-mono tracking-widest",
-                    inputWrapper: `border-2 ${
-                      error
-                        ? "border-danger"
-                        : code.length === 6
-                          ? "border-success"
-                          : "hover:border-blue-300 focus-within:border-blue-500"
-                    } bg-white dark:bg-slate-700`,
+                    inputWrapper: `border-2 ${error
+                      ? "border-danger"
+                      : code.length === 6
+                        ? "border-success"
+                        : "hover:border-blue-300 focus-within:border-blue-500"
+                      } bg-white dark:bg-slate-700`,
                   }}
                   isInvalid={!!error}
                   errorMessage={error}
                 />
-
-                {/* Timer y estado */}
-                <div className="flex items-center justify-center gap-4 text-sm">
-                  {code.length === 6 && !error && (
-                    <Chip size="sm" color="success" variant="flat" startContent={<CheckCircle className="w-3 h-3" />}>
-                      Listo
-                    </Chip>
-                  )}
-                </div>
               </div>
 
               {/* Botón de verificación */}
@@ -250,17 +229,6 @@ export default function MfaVerification({
                     </div>
                   </div>
                 </div>
-
-                {attempts > 0 && (
-                  <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
-                    <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
-                      <AlertTriangle className="w-4 h-4" />
-                      <span className="text-sm">
-                        {attempts} intento{attempts > 1 ? "s" : ""} fallido{attempts > 1 ? "s" : ""}
-                      </span>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           )}

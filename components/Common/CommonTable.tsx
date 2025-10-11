@@ -1,7 +1,7 @@
 import React from 'react'
-import { useDisclosure, Card, CardBody, TableHeader, TableBody, Table, Pagination, TableColumn, TableRow, TableCell } from "@heroui/react";
-import { Button, User, Chip, Tooltip, Input } from "@heroui/react"
-import { UserPlus, Eye, RotateCcwKey, Trash2, SearchIcon } from "lucide-react";
+import { Card, CardBody, TableHeader, TableBody, Table, Pagination, TableColumn, TableRow, TableCell } from "@heroui/react";
+import { Button, Input } from "@heroui/react"
+import { SearchIcon } from "lucide-react";
 
 interface Column {
     key: string;
@@ -52,6 +52,13 @@ function IgTable<T>({
                     size="sm"
                     startContent={<SearchIcon className="text-default-300" />}
                     variant="bordered"
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                            // Aquí va tu lógica
+                            console.log("🔍 Ejecutar búsqueda con:");
+                            // Por ejemplo: triggerSearch(e.target.value)
+                        }
+                    }}
                 />
                 <div className="flex gap-3">
                     {addButton && (

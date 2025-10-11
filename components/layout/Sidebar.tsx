@@ -1,7 +1,7 @@
 "use client"
 
 import { Link } from "@heroui/link"
-import { Home, Users, X, Menu, LayoutGrid, Cog } from "lucide-react"
+import { Home, Users, X, Menu, LayoutGrid, Cog, Settings } from "lucide-react"
 import { Button } from "@heroui/button"
 import { usePathname } from "next/navigation"
 import { useEffect } from "react"
@@ -9,17 +9,20 @@ import { useEffect } from "react"
 interface SidebarProps {
     isOpen: boolean
     onToggle?: () => void
-    onClose?: () => void
+    onClose?: () => void,
+    roles: Array<string>
 }
 
+
 const navigationItems = [
-    { name: "Dashboard", href: "/", icon: Home },
-    { name: "Usuarios", href: "/users", icon: Users },
-    { name: "Aplicaciones", href: "/aplications", icon: LayoutGrid },
-    { name: "Roles", href: "/rols", icon: Cog }
+    { name: "Dashboard", href: "/", icon: Home, rols: ["ADMIN_SSO"] },
+    { name: "Usuarios", href: "/users", icon: Users, rols: ["ADMIN_SSO", "USER_PROVICIONE"] },
+    { name: "Aplicaciones", href: "/aplications", icon: LayoutGrid, rols: ["ADMIN_SSO", "APP_MANAGER"] },
+    { name: "Roles", href: "/rols", icon: Cog, rols: ["ADMIN_SSO", "IAM"] },
+    { name: "Ajustes", href: "/settings", icon: Settings, rols: ["ADMIN_SSO", "END_USER"] }
 ]
 
-export function Sidebar({ isOpen, onToggle, onClose }: SidebarProps) {
+export function Sidebar({ isOpen, onToggle, onClose, roles }: SidebarProps) {
     const pathname = usePathname()
 
     // Close sidebar on route change for mobile
@@ -73,7 +76,7 @@ export function Sidebar({ isOpen, onToggle, onClose }: SidebarProps) {
 
                 {/* Elementos de navegación */}
                 <nav className="flex-1 px-4 py-6 space-y-2">
-                    {navigationItems.map((item) => (
+                    {navigationItems.filter((p) => p.rols.some((ro) => roles.includes(ro))).map((item) => (
                         <Link
                             key={item.name}
                             href={item.href}

@@ -5,6 +5,8 @@ import { Providers } from "../providers";
 import { siteConfig } from "@/config/site";
 import { fontSans } from "@/config/fonts";
 import { Layout } from "@/components/layout";
+import { cookies } from "next/headers";
+import { parseToken } from "@/utils";
 
 
 export const metadata: Metadata = {
@@ -25,11 +27,8 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function RootLayout({ children, }: { children: React.ReactNode; }) {
+  const cookieStore = await (await cookies()).get('sso_token')?.value
   return (
 
     <html suppressHydrationWarning lang="en">
@@ -40,10 +39,10 @@ export default function RootLayout({
           fontSans.variable,
         )}
       >
-        <Providers themeProps={{ attribute: "class", defaultTheme: "dark" }}>
-          <Layout>
+        <Providers themeProps={{ attribute: "class", defaultTheme: "light" }}>
+          <Layout userData={parseToken(cookieStore)}>
             {children}
-          </Layout>  
+          </Layout>
         </Providers>
       </body>
     </html>
