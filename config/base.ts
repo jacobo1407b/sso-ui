@@ -37,3 +37,13 @@ export const refreshSesion = (refres: string, ip?: string, userAgent?: string) =
     });
     return body;
 }
+
+export const authorizeApp = (clientId: string, state: string) => {
+    const body = new URLSearchParams({
+        response_type: 'code',
+        client_id: clientId,
+        state: state,
+        grant_type: 'authorization_code'
+    });
+    return body;
+}

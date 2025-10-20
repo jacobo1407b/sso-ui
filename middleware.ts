@@ -6,7 +6,8 @@ import { refreshToken, authorize, deleteSession } from '@/lib/conexiones';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-
+  const originalUrl = request.nextUrl.pathname + request.nextUrl.search;
+  
   // Excluir rutas públicas
   if (pathname.startsWith('/signin')) return NextResponse.next();
 
@@ -21,8 +22,15 @@ export async function middleware(request: NextRequest) {
   // 🧼 Validar existencia
   if (!sso_token || !sso_refresh || !sso_token_expired || !sso_refresh_expired) {
     console.warn('[SSO] Faltan cookies de sesión');
-    //eliminar sesiones
-    return NextResponse.redirect(new URL('/signin', request.url));
+    if (pathname === '/authorize') {
+      const signInUrl = new URL('/signin', request.url);
+      signInUrl.searchParams.set('callbackUrl', originalUrl);
+      return NextResponse.redirect(signInUrl);
+    }
+    else {
+      return NextResponse.redirect(new URL('/signin', request.url));
+    }
+
   }
 
   const now = Date.now();
@@ -36,7 +44,13 @@ export async function middleware(request: NextRequest) {
     response.cookies.delete('sso_refresh');
     response.cookies.delete('sso_refresh_expired');
     deleteSession("");
-    return NextResponse.redirect(new URL('/signin', request.url));
+    if (pathname === '/authorize') {
+      const signInUrl = new URL('/signin', request.url);
+      signInUrl.searchParams.set('callbackUrl', originalUrl);
+      return NextResponse.redirect(signInUrl);
+    } else {
+      return NextResponse.redirect(new URL('/signin', request.url));
+    }
   }
 
   // 🔁 Access expirado → intentar refresh
@@ -45,14 +59,20 @@ export async function middleware(request: NextRequest) {
     const userAgent = request.headers.get('user-agent') ?? 'Desconocido';
 
     const refreshed = await refreshToken(sso_refresh, ip, userAgent);
-    //console.log(refreshed)
+    
     if (!refreshed?.accessToken) {
       console.error('[SSO] Falló el refresh');
       response.cookies.delete('sso_token');
       response.cookies.delete('sso_token_expired');
       response.cookies.delete('sso_refresh');
       response.cookies.delete('sso_refresh_expired');
-      return NextResponse.redirect(new URL('/signin', request.url));
+      if (pathname === '/authorize') {
+        const signInUrl = new URL('/signin', request.url);
+        signInUrl.searchParams.set('callbackUrl', originalUrl);
+        return NextResponse.redirect(signInUrl);
+      } else {
+        return NextResponse.redirect(new URL('/signin', request.url));
+      }
     }
     // 🧠 Setear nuevas cookies
     response.cookies.set('sso_token', refreshed.accessToken, {
@@ -99,12 +119,20 @@ export async function middleware(request: NextRequest) {
 
   // ✅ Validar token actual
   const isAuthorized = await authorize(sso_token);
+  if(isAuthorized?.user?.log_in_status === "WAIT") return NextResponse.redirect(new URL('/mfa', request.url));
+
 
   if (!isAuthorized?.next) {
     console.warn('[SSO] Token inválido');
-    return NextResponse.redirect(new URL('/signin', request.url));
+    if (pathname === '/authorize') {
+      const signInUrl = new URL('/signin', request.url);
+      signInUrl.searchParams.set('callbackUrl', originalUrl);
+      return NextResponse.redirect(signInUrl);
+    } else {
+      return NextResponse.redirect(new URL('/signin', request.url));
+    }
   }
-  console.log(request.url)
+
   response.cookies.set('sso_user', btoa(JSON.stringify(isAuthorized.user)), {
     path: '/',
     httpOnly: true,
@@ -122,7 +150,6 @@ export const config = {
     '/rols/:path*',
     '/users/:path*',
     '/settings',
-    '/mfa',
     '/authorize',
     '/',
   ],

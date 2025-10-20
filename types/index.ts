@@ -213,3 +213,14 @@ export interface Permission {
   action: string
   IS_SYSTEM: boolean
 }
+
+
+export interface Federate {
+  profile_picture: any
+  email: string
+  name: string
+  app_name: string
+  description: string
+  client_icon_url: string
+  redirect_callback: string
+}

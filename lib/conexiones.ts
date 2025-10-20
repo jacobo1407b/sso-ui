@@ -1,7 +1,22 @@
-import { urlBase, urlToken, client_credentials, urlAuthorize, refreshSesion } from "@/config/base";
+import { urlBase, urlToken, client_credentials, urlAuthorize, refreshSesion, authorizeApp } from "@/config/base";
 import getAccessToken from "./token";
 import { cookies } from 'next/headers';
 
+
+export async function authorization_code(clientId: string, state: string) {
+    const token = await getAccessToken('sso_token');
+    const formdata = authorizeApp(clientId, state);
+    const result = await fetch(`${urlAuthorize}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': `Bearer ${token}`
+        },
+        body: formdata, // enviar como string codificado
+        credentials: 'include',
+    });
+    return result;
+}
 
 export async function refreshToken(refres_tok: string, ip?: string, userAgent?: string) {
     const formdata = refreshSesion(refres_tok, ip, userAgent);
@@ -156,7 +171,7 @@ export async function deleteSession(id: string) {
     if (id === "") {
         url.searchParams.set("main", "Y");
     }
-
+    console.log(url.toString());
     return await fetch(url.toString(), {
         method: "DELETE",
         headers: {
@@ -344,4 +359,19 @@ export async function setRolUser(id: string, body: any) {
         body: JSON.stringify(body)
     })
     return validate;
+}
+
+export async function getFederateData(client: string, user: string) {
+    const token = await getAccessToken('sso_token');
+    const params = new URLSearchParams();
+    params.set('user', String(user));
+    params.set('client', String(client));
+    const users = await fetch(`${urlBase}/sso/federated?${params.toString()}`, {
+        method: "GET",
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+
+    return users;
 }

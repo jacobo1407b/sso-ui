@@ -1,6 +1,6 @@
 // app/actions/createUser.ts
 "use server";
-import { createUserServer, updateUserServ, updatePassword } from "@/lib/conexiones";
+import { createUserServer, updateUserServ, updatePassword, getFederateData } from "@/lib/conexiones";
 
 export async function createUser(formData: any) {
     const sanitize = (str: string) =>
@@ -28,6 +28,11 @@ export async function updateUser(params: any, id: string) {
 
 export async function setPassword(id: string, pass: string) {
     const resp = await updatePassword(id, pass);
+    const data = await resp.json();
+    return data;
+}
+export async function getFederateInfo(clientId: string,userId:string) {
+    const resp = await getFederateData(clientId,userId);
     const data = await resp.json();
     return data;
 }

@@ -7,8 +7,10 @@ import { Input, addToast, Button, Card, CardBody, CardHeader } from "@heroui/rea
 import { Mail, Eye, KeyRound, EyeOff } from "lucide-react";
 import { loginAction } from '@/actions/loginAction';
 
-
-export default function LoginPage() {
+interface iSigningProps {
+    callbackUrl?: string;
+}
+export default function LoginPage({ callbackUrl }: iSigningProps) {
     const router = useRouter();
 
 
@@ -38,7 +40,14 @@ export default function LoginPage() {
         setErrors(newErrors)
         return Object.keys(newErrors).length === 0
     }
+    const redirectToCallbackUrl = (res: any, callbackUrl?: string) => {
+        if (!res.accessToken) throw new Error(res.name)
+        const url = res.user.totp
+            ? callbackUrl ? `/mfa?callbackUrl=${encodeURIComponent(callbackUrl)}` : "/mfa"
+            : (callbackUrl || "/");
 
+        router.push(url);
+    };
     const handleSubmit = async (e: React.FormEvent) => {
         try {
             e.preventDefault()
@@ -46,12 +55,7 @@ export default function LoginPage() {
             if (!validateForm()) return
             setIsLoading(true);
             const res = await loginAction(email, password);
-            if (!res.accessToken) throw new Error(res.name)
-            if (res.user.totp) {
-                router.push("/mfa")
-            } else {
-                router.push("/")
-            }
+            redirectToCallbackUrl(res, callbackUrl);
 
         } catch (error: any) {
             addToast({

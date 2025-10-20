@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 async function SiginPage({ searchParams }: any) {
+  const params = await searchParams;
   const cookieStore = await cookies();
   const token = cookieStore.get('sso_token')?.value ?? "eyJsb2dfaW5fc3RhdHVzIjpudWxsfQ==.eyJsb2dfaW5fc3RhdHVzIjpudWxsfQ=="
   const encodeData = atob(token?.split(".")[1]);
@@ -12,7 +13,7 @@ async function SiginPage({ searchParams }: any) {
   if (parseData.log_in_status === "WAIT") redirect("/mfa");
   if (parseData.log_status === "SUCCESS") redirect("/");
   return (
-    <LoginPage />
+    <LoginPage callbackUrl={params.callbackUrl} />
   )
 }
 

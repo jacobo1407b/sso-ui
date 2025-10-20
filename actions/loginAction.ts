@@ -1,7 +1,7 @@
 'use server';
 
 import { cookies, headers } from 'next/headers';
-import { auth, refreshToken } from '@/lib/conexiones';
+import { auth, refreshToken, authorization_code } from '@/lib/conexiones';
 
 export async function loginAction(username: string, password: string) {
     const hdrs = await headers();
@@ -115,4 +115,9 @@ export async function refreshMfa() {
         maxAge: 60 * 60 * 24 * 7,
     });
     return result
+}
+
+export async function AutorizeAction(client:string, state: string) {
+    const resp = await authorization_code(client, state);
+    return await resp.json();
 }

@@ -33,7 +33,7 @@ const UserManagementHeader: React.FC<UserManagementHeaderProps> = ({
             </Button>)}
             <div>
                 <h1 className="text-3xl font-bold text-foreground">{title}</h1>
-                <p className="text-default-500 mt-1">{subtitle}</p>
+                <p className="text-default-500">{subtitle}</p>
             </div>
              </div>
             

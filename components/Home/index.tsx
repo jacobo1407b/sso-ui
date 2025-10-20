@@ -98,9 +98,9 @@ export default function index() {
                 title="Panel de Control" />
 
 
-            {/* Stats principales */}
+            {/*
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Usuarios */}
+               
                 <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300">
                     <CardBody className="p-6">
                         <div className="flex items-center justify-between mb-4">
@@ -130,7 +130,7 @@ export default function index() {
                     </CardBody>
                 </Card>
 
-                {/* Aplicaciones */}
+               
                 <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300">
                     <CardBody className="p-6">
                         <div className="flex items-center justify-between mb-4">
@@ -161,7 +161,7 @@ export default function index() {
                     </CardBody>
                 </Card>
 
-                {/* Roles */}
+                
                 <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300">
                     <CardBody className="p-6">
                         <div className="flex items-center justify-between mb-4">
@@ -191,9 +191,9 @@ export default function index() {
                 </Card>
             </div>
 
-            {/* Contenido principal */}
+            
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Actividad reciente */}
+
                 <div className="lg:col-span-2">
                     <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-0 shadow-lg h-full">
                         <CardHeader className="pb-3">
@@ -239,7 +239,7 @@ export default function index() {
                     </Card>
                 </div>
 
-                {/* Roles más utilizados */}
+                
                 <div>
                     <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-0 shadow-lg h-full">
                         <CardHeader className="pb-3">
@@ -282,7 +282,7 @@ export default function index() {
                 </div>
             </div>
 
-            {/* Acciones rápidas */}
+         
             <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-0 shadow-lg">
                 <CardHeader>
                     <h3 className="text-xl font-semibold text-foreground">Acciones Rápidas</h3>
@@ -323,7 +323,7 @@ export default function index() {
                         </Button>
                     </div>
                 </CardBody>
-            </Card>
+            </Card>*/}
         </div>
     )
 }

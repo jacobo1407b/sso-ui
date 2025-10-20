@@ -24,7 +24,7 @@ export function Layout({ children, userData }: LayoutProps) {
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      <Sidebar roles={userData.rols.map((x) => x.role_code)} isOpen={isSidebarOpen} onToggle={toggleSidebar} onClose={closeSidebar} />
+      <Sidebar roles={userData.rols?.map((x) => x.role_code) ?? []} isOpen={isSidebarOpen} onToggle={toggleSidebar} onClose={closeSidebar} />
       <div
         className={`flex-1 flex flex-col transition-all duration-300 ease-in-out
           ${isSidebarOpen ? "md:ml-64" : "md:ml-20"}`}
