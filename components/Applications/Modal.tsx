@@ -508,7 +508,7 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
           <Button
             color="primary"
             isLoading={isLoading}
-            isDisabled={appData === null && formData?.client_id !== ""}
+            isDisabled={appData === null && (formData?.client_id !== "" && formData?.client_id !== undefined)}
             onPress={handleSubmit}
             className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white"
           >
