@@ -1,6 +1,6 @@
 // app/actions/createUser.ts
 "use server";
-import { createUserServer, updateUserServ, updatePassword, getFederateData, DownloadImageStream, UpploadUserProfile } from "@/lib/conexiones";
+import { getUsers, createUserServer, updateUserServ, updatePassword, getFederateData, DownloadImageStream, UpploadUserProfile } from "@/lib/conexiones";
 
 export async function createUser(formData: any) {
     const sanitize = (str: string) =>
@@ -45,4 +45,7 @@ export async function getImageBlob(url: string): Promise<Blob> {
 export async function putProfileUser(file: File, id: string, pub?: string) {
     const resp = await UpploadUserProfile(file, id, pub);
     return resp.json();
+}
+export async function getUsersAction(page: number, pageSize: number, user?: string) {
+    return await getUsers(page, pageSize, user);
 }

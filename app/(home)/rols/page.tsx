@@ -2,9 +2,14 @@ import RolsPage from "@/components/Rols";
 import { getRolsAction } from "@/actions/rolsAction";
 
 async function Rols() {
-  const listRols = await getRolsAction();
+  const listRols = await getRolsAction(1, 20);
   if (listRols.code !== 200) return null;
-  return <RolsPage rols={listRols.data} totalPage={listRols.total} />
+  return <RolsPage
+    rols={listRols.data}
+    totalPage={listRols.total}
+    page={listRols.page}
+    pageSize={listRols.pageSize}
+  />
 }
 
 export default Rols

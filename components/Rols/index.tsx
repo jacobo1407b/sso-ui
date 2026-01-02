@@ -1,10 +1,10 @@
 "use client"
-
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Tooltip } from "@heroui/react";
 import { Eye } from "lucide-react";
 
-
+import { getRolsAction } from "@/actions/rolsAction";
 import UserManagementHeader from "../Common/UserManagementHeader";
 import ReusableTableCard from "../Common/CommonTable";
 import { ListRols } from "@/types";
@@ -13,8 +13,39 @@ import { ListRols } from "@/types";
 interface iRolsProps {
   rols: Array<ListRols>
   totalPage: number
+  page: number
+  pageSize: number
 }
-function Rols({ rols, totalPage }: iRolsProps) {
+function Rols({ rols, totalPage, page, pageSize }: iRolsProps) {
+
+  const [totalPages, setTotalPages] = useState(0);
+  const [pageSizes, setPageSizes] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [dataRole, setDataRole] = useState<Array<ListRols>>([]);
+
+  useEffect(() => {
+    setTotalPages(totalPage);
+    setPageSizes(pageSize);
+    setCurrentPage(page);
+    setDataRole(rols)
+  }, []);
+
+
+  const handlerSearch = async (value: string) => {
+    const result = await getRolsAction(1, pageSize, value ?? undefined);
+    setTotalPages(result.total);
+    setPageSizes(result.pageSize);
+    setCurrentPage(result.page);
+    setDataRole(result.data);
+  }
+
+  const handlerNavigation = async (page: number) => {
+    const result = await getRolsAction(page, pageSize);
+    setTotalPages(result.total);
+    setPageSizes(result.pageSize);
+    setCurrentPage(result.page);
+    setDataRole(result.data);
+  }
 
 
   return (
@@ -25,7 +56,8 @@ function Rols({ rols, totalPage }: iRolsProps) {
         title="Administrar Roles y accesos" />
       {/*Buscador */}
       <ReusableTableCard
-        searchPlaceholder="Buscar por nombre"
+        onSearch={handlerSearch}
+        searchPlaceholder="Buscar por codigo"
         columns={[
           { key: "rol", label: "NOMBRE" },
           { key: "descripcion", label: "DESCRIPCION" },
@@ -34,7 +66,7 @@ function Rols({ rols, totalPage }: iRolsProps) {
           { key: "created", label: "CREADO POR" },
           { key: "actions", label: "ACCIONES" }
         ]}
-        data={rols}
+        data={dataRole}
         rowKey={(row) => row.id}
         renderRow={(row) => [
           row.role_name,
@@ -62,9 +94,9 @@ function Rols({ rols, totalPage }: iRolsProps) {
           </div>
         ]}
         pagination={{
-          page: 1,
-          total: Math.ceil(totalPage / 20),
-          onChange: (p) => console.log("Page:", p),
+          page: currentPage,
+          total: Math.ceil(totalPages / pageSizes),
+          onChange: handlerNavigation,
         }}
         totalCount={totalPage}
       />

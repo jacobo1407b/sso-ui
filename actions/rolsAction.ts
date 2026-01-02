@@ -1,8 +1,8 @@
 "use server";
 import { getRolsTabel, detailsRol, setRolUser } from "@/lib/conexiones";
 
-export async function getRolsAction() {
-    const resp = await getRolsTabel();
+export async function getRolsAction(page?: number, pageSize?: number, cod?: string) {
+    const resp = await getRolsTabel(page, pageSize, cod);
     return await resp.json();
 }
 

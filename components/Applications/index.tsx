@@ -11,7 +11,7 @@ import ReusableTableCard from "../Common/CommonTable";
 import CommonModal from '@/components/Common/CommonModal'
 import { Clients, Grant } from "@/types";
 import { formateaFechaRelativa } from "@/utils";
-import { deleteAppAction } from "@/actions/clientAction";
+import { deleteAppAction, getAllClients } from "@/actions/clientAction";
 
 
 
@@ -31,28 +31,23 @@ function Aplication({ data, page, pageSize, totalPages, listGrants }: iAppsProps
   const [isDeleteApp, setIsDeleteApp] = useState(false)
 
 
-  const [dataApp, setDataApp] = useState<Clients[]>([]);
-  const [pageApp, setPageApp] = useState(1);
-  const [totalPagesApp, setTotalPagesApp] = useState(0);
-  const [pageSizeApp, setPageSizeApp] = useState(0)
-
-
+  const [totalPage, setTotalPage] = useState(0);
+  const [pageSizes, setPageSizes] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [clientsData, setclientsData] = useState<Array<Clients>>([]);
 
   useEffect(() => {
-    setDataApp(data);
-    setPageApp(page);
-    setTotalPagesApp(totalPages);
-    setPageSizeApp(pageSize)
+    setTotalPage(totalPages);
+    setPageSizes(pageSize);
+    setCurrentPage(page);
+    setclientsData(data);
   }, [])
+
 
   const handlerSelectededit = (data: Clients) => {
     setTemporalData(data);
     onEditOpen()
 
-  }
-
-  const handlerSearch = (target: string) => {
-    console.log(target)
   }
 
   const handlerDelete = (data: Clients) => {
@@ -79,6 +74,22 @@ function Aplication({ data, page, pageSize, totalPages, listGrants }: iAppsProps
 
   }
 
+  const handlerNavigation = async (page: number) => {
+    const result = await getAllClients(page, pageSize);
+    setTotalPage(result.totalCount);
+    setPageSizes(result.pageSize);
+    setCurrentPage(result.page);
+    setclientsData(result.data);
+  }
+
+  const handlerSearch = async (value: string) => {
+    const result = await getAllClients(1, pageSize, value ?? undefined);
+    setTotalPage(result.data.length === 0 ? 1 : result.data.length);
+    setPageSizes(result.pageSize);
+    setCurrentPage(result.page);
+    setclientsData(result.data);
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <UserManagementHeader
@@ -86,7 +97,7 @@ function Aplication({ data, page, pageSize, totalPages, listGrants }: iAppsProps
         title="Gestión de Aplicaciones" />
 
       <ReusableTableCard
-        handlerSearch={handlerSearch}
+        onSearch={handlerSearch}
         searchPlaceholder="Buscar por nombre"
         columns={[
           { key: "app_name", label: "NOMBRE" },
@@ -95,7 +106,7 @@ function Aplication({ data, page, pageSize, totalPages, listGrants }: iAppsProps
           { key: "fecha", label: "FECHA DE CREACION" },
           { key: "actions", label: "ACCIONES" },
         ]}
-        data={dataApp}
+        data={clientsData}
         rowKey={(row) => row.client_id}
         renderRow={(row) => [
           row.app_name,
@@ -125,17 +136,19 @@ function Aplication({ data, page, pageSize, totalPages, listGrants }: iAppsProps
           </div>
         ]}
         pagination={{
-          page: page,
-          total: Math.ceil(totalPagesApp / pageSizeApp),
-          onChange: (p) => console.log("Page:", p),
+          page: currentPage,
+          total: Math.ceil(totalPage / pageSizes),
+          onChange: handlerNavigation,
         }}
-        totalCount={totalPagesApp}
+        totalCount={totalPage}
         addButton={{
           label: "Crear Aplicación",
           onClick: () => onCreateOpen(),
           icon: <PlusIcon className="w-5 h-5" />,
         }}
       />
+
+
 
       <UserModal
         isOpen={isCreateOpen}

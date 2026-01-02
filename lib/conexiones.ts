@@ -236,9 +236,17 @@ export async function setPreferences(id: string, payload: any) {
 }
 /***CLIENTS */
 
-export async function getClients() {
+export async function getClients(page?: number, pageSize?: number, appName?: string) {
     const token = await getAccessToken('sso_token');
-    const validate = await fetch(`${urlBase}/clients`, {
+    const params = new URLSearchParams();
+    params.set('page', String(page || 1));
+    params.set('pageSize', String(pageSize || 20));
+
+    if (appName) {
+        params.set("q", `app_name=${appName}`)
+    }
+
+    const validate = await fetch(`${urlBase}/clients?${params.toString()}`, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${token}`,
@@ -324,9 +332,17 @@ export async function setGrantsApp(id: string, payload: any) {
     return validate;
 }
 
-export async function getRolsTabel() {
+export async function getRolsTabel(page?: number, pageSize?: number, cod?: string) {
     const token = await getAccessToken('sso_token');
-    const validate = await fetch(`${urlBase}/rols`, {
+
+    const params = new URLSearchParams();
+    params.set('page', String(page || 1));
+    params.set('size', String(pageSize || 20));
+
+    if (cod) {
+        params.set("rol_code", cod)
+    }
+    const validate = await fetch(`${urlBase}/rols?${params.toString()}`, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${token}`,
@@ -335,7 +351,6 @@ export async function getRolsTabel() {
     })
     return validate;
 }
-
 export async function detailsRol(id: string) {
     const token = await getAccessToken('sso_token');
     const validate = await fetch(`${urlBase}/rol/${id}`, {

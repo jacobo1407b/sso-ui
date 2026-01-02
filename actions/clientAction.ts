@@ -1,11 +1,10 @@
 "use server";
 import { getClients, getListGrants, createApp, updateApp, deleteApp, getAppDetails, setGrantsApp, uploadAppIcon } from "@/lib/conexiones";
 
-export async function getAllClients() {
-    const clients = await getClients();
+export async function getAllClients(page?: number, pageSize?: number, appName?: string) {
+    const clients = await getClients(page, pageSize, appName);
     return await clients.json();
 }
-
 export async function getListGrantAction() {
     const list = await getListGrants();
     return await list.json();

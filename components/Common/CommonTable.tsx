@@ -1,6 +1,6 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Card, CardBody, TableHeader, TableBody, Table, Pagination, TableColumn, TableRow, TableCell } from "@heroui/react";
-import { Button, Input } from "@heroui/react"
+import { Button, Input, Spinner } from "@heroui/react"
 import { SearchIcon } from "lucide-react";
 
 interface Column {
@@ -19,7 +19,7 @@ interface ReusableTableCardProps<T> {
     data: T[];
     rowKey: (row: T) => string | number;
     renderRow: (row: T) => React.ReactNode[];
-    handlerSearch: (target: string) => void
+    onSearch: (value: string) => void
     pagination?: PaginationProps;
     totalCount?: number;
     addButton?: {
@@ -39,9 +39,24 @@ function IgTable<T>({
     totalCount,
     addButton,
     searchPlaceholder,
-    handlerSearch
+    onSearch
 }: ReusableTableCardProps<T>) {
-    console.log(data)
+
+    const [isLoad, setIsLoad] = useState(false);
+
+
+    const onChangePage = async (page: number) => {
+        setIsLoad(true);
+        await pagination?.onChange(page);
+        setIsLoad(false);
+    }
+    const onLoadSearch = async (e: any) => {
+        if (e.key === "Enter" && isLoad === false) {
+            setIsLoad(true);
+            await onSearch(e.target?.value);
+            setIsLoad(false);
+        }
+    }
     return (
 
         <>
@@ -56,14 +71,7 @@ function IgTable<T>({
                     size="sm"
                     startContent={<SearchIcon className="text-default-300" />}
                     variant="bordered"
-                    onKeyDown={(e:any) => {
-                        if (e.key === "Enter") {
-                            // Aquí va tu lógica
-                            handlerSearch(e.target.value)
-                            console.log("🔍 Ejecutar búsqueda con:");
-                            // Por ejemplo: triggerSearch(e.target.value)
-                        }
-                    }}
+                    onKeyDown={(e) => onLoadSearch(e)}
                 />
                 <div className="flex gap-3">
                     {addButton && (
@@ -110,7 +118,21 @@ function IgTable<T>({
                                 <TableColumn key={col.key}>{col.label}</TableColumn>
                             ))}
                         </TableHeader>
-                        <TableBody>
+                        <TableBody
+                            loadingContent={
+                                <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center min-h-[400px]">
+                                    <div className="text-center space-y-4">
+                                        <Spinner
+                                            size="lg"
+                                            variant="gradient"
+                                        />
+                                    </div>
+                                </div>
+
+
+                            }
+                            loadingState={isLoad ? "loading" : "idle"}
+                        >
                             {data.map((row) => (
                                 <TableRow key={rowKey(row)}>
                                     {renderRow(row).map((cell, idx) => (

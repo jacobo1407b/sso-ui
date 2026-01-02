@@ -1,8 +1,8 @@
 "use client"
 import Link from "next/link";
-import { useState, useEffect} from "react";
-import { User, Chip, Tooltip,useDisclosure } from "@heroui/react"
-import { UserPlus, Eye, RotateCcwKey} from "lucide-react";
+import { useState, useEffect } from "react";
+import { User, Chip, Tooltip, useDisclosure } from "@heroui/react"
+import { UserPlus, Eye, RotateCcwKey } from "lucide-react";
 import AvatarCustom from "../Avatar";
 
 import UserModal from "./Modal";
@@ -12,7 +12,8 @@ import ResetPass from "./ResetPass";
 
 import UserManagementHeader from "../Common/UserManagementHeader";
 import ReusableTableCard from "../Common/CommonTable";
-import { UserData } from "@/types";
+import {getUsersAction} from "@/actions/createUser";
+
 
 
 
@@ -48,10 +49,40 @@ export default function Users(artifact: iUsersProps) {
   const { isOpen: isResetOpen, onOpen: onResetOpen, onClose: onResetClose } = useDisclosure();
   const [userId, setUserId] = useState("");
 
+  const [userData, setUserData] = useState<Array<usersList>>([]);
+  const [totalPages, setTotalPages] = useState(0);
+  const [pageSize, setPageSize] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1)
+
+
+  useEffect(() => {
+    setUserData(artifact.users);
+    setTotalPages(artifact.totalCount);
+    setPageSize(artifact.pageSize)
+    setCurrentPage(artifact.page)
+  }, [])
+
+
   const handlerReset = (userId: string) => {
     setUserId(userId);
     onResetOpen()
   }
+
+  const handlerNavigation = async (page: number) => {
+    const result = await getUsersAction(page, artifact.pageSize);
+    setUserData(result.data);
+    setTotalPages(result.totalCount);
+    setPageSize(result.pageSize);
+    setCurrentPage(result.page);
+  }
+  const handlerSearch = async (value: string) => {
+    const result = await getUsersAction(1, artifact.pageSize, value ?? undefined);
+    setUserData(result.data);
+    setTotalPages(result.data.length === 0 ? 1 : result.data.length);
+    setPageSize(result.pageSize);
+    setCurrentPage(result.page);
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <UserManagementHeader
@@ -59,6 +90,7 @@ export default function Users(artifact: iUsersProps) {
         title="Gestión de Usuarios" />
 
       <ReusableTableCard
+        onSearch={handlerSearch}
         searchPlaceholder="Buscar por nombre"
         columns={[
           { key: "name", label: "NOMBRE" },
@@ -68,8 +100,7 @@ export default function Users(artifact: iUsersProps) {
           { key: "lastAccess", label: "ÚLTIMO ACCESO" },
           { key: "actions", label: "ACCIONES" },
         ]}
-       
-        data={artifact.users}
+        data={userData}
         rowKey={(row) => row.user_id}
         renderRow={(row) => [
           <AvatarCustom
@@ -107,11 +138,11 @@ export default function Users(artifact: iUsersProps) {
           </div>,
         ]}
         pagination={{
-          page: artifact.page,
-          total: Math.ceil(artifact.totalCount / artifact.pageSize),
-          onChange: (p) => console.log("Page:", p),
+          page: currentPage,
+          total: Math.ceil(totalPages / pageSize),
+          onChange: handlerNavigation,
         }}
-        totalCount={artifact.totalCount}
+        totalCount={totalPages}
         addButton={{
           label: "Nuevo Usuario",
           onClick: () => onCreateOpen(),
