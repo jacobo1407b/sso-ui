@@ -6,6 +6,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { ToastProvider, HeroUIProvider } from "@heroui/react";
+import { IndexedDBProvider } from "@/components/IndexedDBProvider";
 
 
 export interface ProvidersProps {
@@ -26,8 +27,13 @@ export function Providers({ children, themeProps }: ProvidersProps) {
 
   return (
     <HeroUIProvider navigate={router.push}>
-      <ToastProvider />
-      <NextThemesProvider {...themeProps}>{children}</NextThemesProvider>
+      <IndexedDBProvider
+        dbname="sso_images"
+        tablename="profiles"
+      >
+        <ToastProvider />
+        <NextThemesProvider {...themeProps}>{children}</NextThemesProvider>
+      </IndexedDBProvider>
     </HeroUIProvider>
   );
 }

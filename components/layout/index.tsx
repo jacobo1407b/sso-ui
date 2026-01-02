@@ -12,6 +12,7 @@ interface LayoutProps {
 }
 
 export function Layout({ children, userData }: LayoutProps) {
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   const toggleSidebar = () => {
@@ -29,7 +30,13 @@ export function Layout({ children, userData }: LayoutProps) {
         className={`flex-1 flex flex-col transition-all duration-300 ease-in-out
           ${isSidebarOpen ? "md:ml-64" : "md:ml-20"}`}
       >
-        <Navbar url_avatar={userData.profile_picture} username={userData.username} onSidebarToggle={toggleSidebar} />
+        <Navbar
+          user_id={userData.userId}
+          url_avatar={userData.profile_picture}
+          username={userData.username}
+          onSidebarToggle={toggleSidebar}
+          last_update_avatar={userData.last_update_avatar}
+        />
         <main className="flex-1 container mx-auto px-4 py-6 max-w-7xl">{children}</main>
       </div>
     </div>

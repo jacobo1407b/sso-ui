@@ -7,7 +7,7 @@ import { refreshToken, authorize, deleteSession } from '@/lib/conexiones';
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const originalUrl = request.nextUrl.pathname + request.nextUrl.search;
-  
+
   // Excluir rutas públicas
   if (pathname.startsWith('/signin')) return NextResponse.next();
 
@@ -59,20 +59,30 @@ export async function middleware(request: NextRequest) {
     const userAgent = request.headers.get('user-agent') ?? 'Desconocido';
 
     const refreshed = await refreshToken(sso_refresh, ip, userAgent);
-    
+
     if (!refreshed?.accessToken) {
-      console.error('[SSO] Falló el refresh');
-      response.cookies.delete('sso_token');
-      response.cookies.delete('sso_token_expired');
-      response.cookies.delete('sso_refresh');
-      response.cookies.delete('sso_refresh_expired');
-      if (pathname === '/authorize') {
-        const signInUrl = new URL('/signin', request.url);
-        signInUrl.searchParams.set('callbackUrl', originalUrl);
-        return NextResponse.redirect(signInUrl);
+      console.error("[SSO] Falló el refresh");
+
+      let redirectResponse: NextResponse;
+
+      if (pathname === "/authorize") {
+        const signInUrl = new URL("/signin", request.url);
+        signInUrl.searchParams.set("callbackUrl", originalUrl);
+        redirectResponse = NextResponse.redirect(signInUrl);
       } else {
-        return NextResponse.redirect(new URL('/signin', request.url));
+        redirectResponse = NextResponse.redirect(new URL("/signin", request.url));
       }
+
+      // Aquí borras las cookies en el response que vas a retornar
+      redirectResponse.cookies.delete("sso_token");
+      redirectResponse.cookies.delete("sso_session");
+      redirectResponse.cookies.delete("sso_user");
+      redirectResponse.cookies.delete("sso_token_expired");
+      redirectResponse.cookies.delete("sso_refresh");
+      redirectResponse.cookies.delete("sso_refresh_expired");
+
+      return redirectResponse;
+
     }
     // 🧠 Setear nuevas cookies
     response.cookies.set('sso_token', refreshed.accessToken, {
@@ -119,7 +129,7 @@ export async function middleware(request: NextRequest) {
 
   // ✅ Validar token actual
   const isAuthorized = await authorize(sso_token);
-  if(isAuthorized?.user?.log_in_status === "WAIT") return NextResponse.redirect(new URL('/mfa', request.url));
+  if (isAuthorized?.user?.log_in_status === "WAIT") return NextResponse.redirect(new URL('/mfa', request.url));
 
 
   if (!isAuthorized?.next) {

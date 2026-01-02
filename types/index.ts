@@ -15,6 +15,7 @@ export interface clientApp {
   app_type: string
   client_icon_url: string
   created_by: string
+  last_update_date: string
   grants?: Grant[]
 }
 
@@ -54,6 +55,7 @@ export interface UserData {
   userBusiness: UserBusiness
   location: Location,
   sessions: number
+  last_update_avatar: number | null
 }
 
 export interface Preferences {
@@ -161,6 +163,7 @@ export interface TokenData {
   iat: number
   exp: number
   email: string
+  last_update_avatar: number
   profile_picture: string
 }
 
@@ -203,6 +206,7 @@ export interface UserRol {
   profile_picture: any
   department: any
   job_title: string
+  last_update_avatar: number | null
   grant_date: string
 }
 

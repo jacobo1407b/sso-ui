@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from "react"
 import { Input, addToast, Button, Card, CardBody, CardHeader } from "@heroui/react";
 import { Mail, Eye, KeyRound, EyeOff } from "lucide-react";
+import { useDB } from "@/components/IndexedDBProvider";
 import { loginAction } from '@/actions/loginAction';
 
 interface iSigningProps {
@@ -12,6 +13,8 @@ interface iSigningProps {
 }
 export default function LoginPage({ callbackUrl }: iSigningProps) {
     const router = useRouter();
+    const db = useDB();
+
 
 
     const [email, setEmail] = useState("")
@@ -55,9 +58,17 @@ export default function LoginPage({ callbackUrl }: iSigningProps) {
             if (!validateForm()) return
             setIsLoading(true);
             const res = await loginAction(email, password);
+            const dateProfile = res.user.last_update_avatar ? new Date(res.user.last_update_avatar).getTime() : null;
+            const isStored = await db.getByUser("profiles", res.user.user_id);
+            if (isStored === null) {
+                await db.add("profiles", { fecha: dateProfile, image: null, pub: res.user.profile_picture, user_id: res.user.user_id });
+            }else{
+                await db.update("profiles", isStored.id as number, { fecha: dateProfile, image: isStored.image, pub: res.user.profile_picture, user_id: res.user.user_id });
+            }
             redirectToCallbackUrl(res, callbackUrl);
 
         } catch (error: any) {
+            console.error(error)
             addToast({
                 title: error.message,
                 description: error.message,

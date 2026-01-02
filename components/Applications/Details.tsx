@@ -6,6 +6,7 @@ import { ArrowLeft, Trash2, Settings, CheckCircle, Copy, EyeOff, Eye } from "luc
 import { Shield, Plus, Globe, Edit, AlertTriangle } from "lucide-react";
 import { Lock, Key, Clock } from "lucide-react";
 
+import IconComponent from "../Icon";
 import Grants from "./Grants";
 import CommonModal from '@/components/Common/CommonModal';
 import Modal from "./Modal";
@@ -20,20 +21,19 @@ interface iDetailsProps {
 function getIcon(icontext: string) {
     switch (icontext) {
         case "Globe":
-            return <Globe className="w-5 h-5 text-blue-600 dark:text-blue-400"  />
+            return <Globe className="w-5 h-5 text-blue-600 dark:text-blue-400" />
         case "Lock":
             return <Lock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
         case "Key":
-            return <Key className="w-5 h-5 text-blue-600 dark:text-blue-400"  />
+            return <Key className="w-5 h-5 text-blue-600 dark:text-blue-400" />
         case "Clock":
-            return <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400"  />
+            return <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
         default:
             return "";
     }
 }
 
 export default function DetailsApp({ appOne, list }: iDetailsProps) {
-
     const router = useRouter();
 
     const { isOpen: isEditOpen, onOpen: onEditOpen, onClose: onEditClose } = useDisclosure()
@@ -96,7 +96,12 @@ export default function DetailsApp({ appOne, list }: iDetailsProps) {
                     <div className="flex justify-between items-start w-full">
                         <div className="flex items-center gap-4">
                             <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
-                                <Settings className="w-8 h-8 text-white" />
+                                {/**<Settings className="w-8 h-8 text-white" />**/}
+                                <IconComponent
+                                    app={appOne.client_id}
+                                    last_update_date={new Date(appOne.last_update_date).getTime()}
+                                    icon_url={appOne.client_icon_url}
+                                />
                             </div>
                             <div>
                                 <h2 className="text-2xl font-bold text-foreground">{appOne.app_name}</h2>

@@ -3,12 +3,14 @@ import {
   NavbarContent,
   NavbarBrand,
 } from "@heroui/navbar";
+import { useDB } from "@/components/IndexedDBProvider";
 import { useState, useEffect } from "react";
 import { useRouter } from 'next/navigation';
 import Link from "next/link";
 import { Button } from "@heroui/button";
 import { Menu } from "lucide-react"
-import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@heroui/dropdown"
+import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@heroui/dropdown";
+import { getImageBlob } from "@/actions/createUser";
 import { Avatar } from "@heroui/avatar"
 import { ThemeSwitch } from "@/components/theme-switch";
 import { Settings, User, LogOut, HelpCircle } from "lucide-react"
@@ -19,17 +21,57 @@ import { deleteSessionAction } from "@/actions/preferencesAction";
 interface NavbarProps {
   onSidebarToggle?: () => void
   url_avatar: string
-  username: string
+  username?: string
+  last_update_avatar: number | null
+  user_id: string
 }
 
-export const Navbar = ({ onSidebarToggle, url_avatar, username }: NavbarProps) => {
+export const Navbar = ({ onSidebarToggle, url_avatar, username, last_update_avatar, user_id }: NavbarProps) => {
   const router = useRouter();
-  const [isClosed, setisClosed] = useState(false);
-  const [blobImage, setBlobImage] = useState<string | undefined>()
+
+  const [blobImage, setBlobImage] = useState<string | undefined>();
+
+  const db = useDB();
+
 
   useEffect(() => {
-    setBlobImage(url_avatar);
-  }, [])
+    if (!db.ready) return; // 👈 esperar a que la DB esté lista
+    if (last_update_avatar && url_avatar) {
+      validImageDownload(url_avatar); // aquí ya puedes usar tu API
+    }
+  }, [db.ready, last_update_avatar, url_avatar]);
+
+
+  const validImageDownload = async (pub: string) => {
+    const result = await db.getByPub("profiles", pub);
+
+    // Caso 3: existe y está vigente
+    if (result && result.image && result.fecha === last_update_avatar) {
+      setBlobImage(URL.createObjectURL(result.image as Blob));
+      return;
+    }
+
+    // Caso 1 y 2: no existe o está desactualizado/sin imagen
+    console.log("Descargando imagen desde la red...");
+    const imgBlob = await getImageBlob(pub);
+    setBlobImage(URL.createObjectURL(imgBlob));
+
+    const newRecord = {
+      fecha: last_update_avatar as number,
+      image: imgBlob,
+      pub,
+      user_id: user_id,
+    };
+
+    if (!result?.id) {
+      // Caso 1: no existe → crear
+      await db.add("profiles", newRecord);
+    } else {
+      // Caso 2: existe pero desactualizado → actualizar
+      await db.update("profiles", result.id, { ...result, ...newRecord });
+    }
+  };
+
 
   const onCloseSession = async () => {
     await deleteSessionAction("");

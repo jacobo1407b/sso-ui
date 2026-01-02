@@ -19,6 +19,7 @@ interface ReusableTableCardProps<T> {
     data: T[];
     rowKey: (row: T) => string | number;
     renderRow: (row: T) => React.ReactNode[];
+    handlerSearch: (target: string) => void
     pagination?: PaginationProps;
     totalCount?: number;
     addButton?: {
@@ -37,9 +38,12 @@ function IgTable<T>({
     pagination,
     totalCount,
     addButton,
-    searchPlaceholder
+    searchPlaceholder,
+    handlerSearch
 }: ReusableTableCardProps<T>) {
+    console.log(data)
     return (
+
         <>
             <div className="flex justify-between gap-3 items-end">
                 <Input
@@ -52,9 +56,10 @@ function IgTable<T>({
                     size="sm"
                     startContent={<SearchIcon className="text-default-300" />}
                     variant="bordered"
-                    onKeyDown={(e) => {
+                    onKeyDown={(e:any) => {
                         if (e.key === "Enter") {
                             // Aquí va tu lógica
+                            handlerSearch(e.target.value)
                             console.log("🔍 Ejecutar búsqueda con:");
                             // Por ejemplo: triggerSearch(e.target.value)
                         }

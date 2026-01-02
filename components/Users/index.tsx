@@ -1,11 +1,10 @@
 "use client"
 import Link from "next/link";
-import { useState } from "react";
-import { useDisclosure, Button } from "@heroui/react";
-import { User, Chip, Tooltip } from "@heroui/react"
-import { UserPlus, Eye, RotateCcwKey, Trash2, AlertTriangle } from "lucide-react";
+import { useState, useEffect} from "react";
+import { User, Chip, Tooltip,useDisclosure } from "@heroui/react"
+import { UserPlus, Eye, RotateCcwKey} from "lucide-react";
+import AvatarCustom from "../Avatar";
 
-import CommonModal from '@/components/Common/CommonModal'
 import UserModal from "./Modal";
 import { formateaFechaRelativa } from "@/utils";
 
@@ -34,6 +33,7 @@ interface usersList {
   profile_picture: string
   status: string
   last_login: string
+  last_update_avatar: number | null
   userBusiness: UserBusiness
 }
 
@@ -45,15 +45,8 @@ interface UserBusiness {
 export default function Users(artifact: iUsersProps) {
 
   const { isOpen: isCreateOpen, onOpen: onCreateOpen, onClose: onCreateClose } = useDisclosure();
-  //const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
   const { isOpen: isResetOpen, onOpen: onResetOpen, onClose: onResetClose } = useDisclosure();
-  const [currentUser, setcurrentUser] = useState<UserData | null>(null);
   const [userId, setUserId] = useState("");
-
-  /*const handlerDeteleUser = (user: any) => {
-    setcurrentUser(user)
-    onDeleteOpen();
-  }*/
 
   const handlerReset = (userId: string) => {
     setUserId(userId);
@@ -75,17 +68,16 @@ export default function Users(artifact: iUsersProps) {
           { key: "lastAccess", label: "ÚLTIMO ACCESO" },
           { key: "actions", label: "ACCIONES" },
         ]}
-        //https://i.pravatar.cc/150?u=a042581f4e29026024d
+       
         data={artifact.users}
         rowKey={(row) => row.user_id}
         renderRow={(row) => [
-          <User
-            avatarProps={{
-              radius: "lg",
-              src: row.profile_picture,
-            }}
+          <AvatarCustom
+            profile_picture={row.profile_picture}
+            last_update_avatar={row.last_update_avatar}
+            email={row.email}
             name={row.name}
-            description={row.email}
+            user_id={row.user_id}
           />,
           <p className="text-bold text-sm capitalize">{row?.userBusiness?.job_title}</p>,
           <p className="text-bold text-sm capitalize text-default-400">{row.phone}</p>,

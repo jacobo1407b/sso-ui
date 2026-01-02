@@ -1,0 +1,62 @@
+import React, { useEffect, useState } from "react";
+import { Avatar } from "@heroui/react";
+import { useDB } from "../IndexedDBProvider";
+import { getImageBlob } from "@/actions/createUser";
+import { Settings } from "lucide-react";
+
+interface iIconProps {
+    app: string;
+    last_update_date: number | null;
+    icon_url: string;
+}
+
+function IconComponent({ app, last_update_date, icon_url }: iIconProps) {
+
+    const db = useDB();
+    const [iconSrc, setIconSrc] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!db.ready) return;
+        if (!icon_url) return;
+        const loadIcon = async () => {
+            const result = await db.getByPub("profiles", icon_url);
+            // Caso 3: existe y está vigente
+            if (result && result?.image && result?.fecha === last_update_date) {
+                setIconSrc(URL.createObjectURL(result.image as Blob));
+                return;
+            }
+
+            // Caso 1 y 2: no existe o está desactualizado
+            console.log("Descargando icono desde la red...");
+            const imgBlob = await getImageBlob(icon_url);
+            setIconSrc(URL.createObjectURL(imgBlob));
+
+            const newRecord = {
+                fecha: last_update_date,
+                image: imgBlob,
+                pub: icon_url,
+                user_id: app
+            };
+
+            if (!result?.id) {
+                await db.add("profiles", newRecord);
+            } else {
+                await db.update("profiles", result.id, newRecord);
+            }
+        };
+
+        loadIcon();
+    }, [db.ready, app, last_update_date, icon_url]);
+
+    return (
+        <div>
+            {iconSrc ? (
+                <Avatar size="sm" src={iconSrc} alt={app} />
+            ) : (
+                <Settings className="w-8 h-8 text-white" />
+            )}
+        </div>
+    );
+}
+
+export default IconComponent;

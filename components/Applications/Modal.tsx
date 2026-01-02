@@ -4,10 +4,12 @@ import { useState, useCallback, useEffect } from "react"
 import { Select, SelectItem } from "@heroui/react";
 import { Button, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Input, Tooltip, Divider, addToast } from "@heroui/react"
 import { X, Plus, CheckCircle, Copy, Globe, EyeOff, Eye, Smartphone, Monitor, ImageIcon } from "lucide-react";
+import { useDB } from "../IndexedDBProvider";
 import { clientApp, Grant } from "@/types"
 
-import { createClient, updateAppAction } from "@/actions/clientAction";
+import { createClient, updateAppAction, uploadIconApp } from "@/actions/clientAction";
 import GrantsCheck from "../Common/GrantsCheck";
+import { getImageBlob } from "@/actions/createUser";
 
 
 
@@ -43,15 +45,14 @@ interface CreateApplicationModalProps {
 }
 
 function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imageDownloaded, listGrants }: CreateApplicationModalProps) {
-  useEffect(() => {
-    setFormData(appData);
-    setGroupSelected(selectedGrants)
-  }, [appData]);
+
+  const db = useDB();
 
   const [formData, setFormData] = useState<clientApp | null>(appData);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [iconFile, setIconFile] = useState<File | null>(null)
-  const [iconPreview, setIconPreview] = useState<string>(imageDownloaded)
+  const [iconFile, setIconFile] = useState<File | null>(null);
+  const [isNewFile, setIsNewFile] = useState(false);
+  const [iconPreview, setIconPreview] = useState<string>()
   const [isDragActive, setIsDragActive] = useState(false)
   const [groupSelected, setGroupSelected] = useState<Array<string>>(selectedGrants);
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -64,6 +65,54 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
     icon?: string
   }>({});
 
+
+  useEffect(() => {
+    setFormData(appData);
+    setGroupSelected(selectedGrants);
+
+    if (!db.ready || !appData?.client_icon_url || isOpen === false) return;
+
+    const loadImage = async () => {
+      try {
+        const result = await db.getByPub("profiles", appData.client_icon_url);
+        const vigente = result?.fecha === new Date(appData?.last_update_date).getTime() // campo que marca vigencia
+
+
+        if (result?.image && vigente) {
+          // Caso 1: usar cache vigente
+          setIconFile(result.image as File);
+          setIconPreview(URL.createObjectURL(result.image as Blob));
+          return;
+        }
+
+        // Caso 2 y 3: descargar y guardar
+        const imgBlob = await getImageBlob(appData.client_icon_url);
+        setIconPreview(URL.createObjectURL(imgBlob));
+        setIconFile(imgBlob as File);
+
+        const newRecord = {
+          fecha: appData?.last_update_date ? new Date(appData?.last_update_date).getTime() : null,
+          image: imgBlob,
+          pub: appData.client_icon_url,
+          user_id: appData.client_id
+        };
+        if (!result?.id) {
+          // No existe → crear
+          await db.add("profiles", newRecord);
+        } else {
+          // Existe pero desactualizado → actualizar
+          await db.update("profiles", result.id, newRecord);
+        }
+      } catch (err) {
+        console.error("Error cargando client_icon:", err);
+      }
+    };
+
+    loadImage();
+  }, [db.ready, appData, selectedGrants, isOpen]);
+
+
+
   const handlerClose = () => {
     onClose();
     //setFormData(null);
@@ -74,7 +123,7 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
   const isValidUrl = (url: string): boolean => {
     try {
       const urlObj = new URL(url)
-      return urlObj.protocol === "http:" || urlObj.protocol === "https:"
+      return /*urlObj.protocol === "http:" ||*/ urlObj.protocol === "https:"
     } catch {
       return false
     }
@@ -117,6 +166,7 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
     const file = acceptedFiles[0]
     if (file && file.type.startsWith("image/")) {
       setIconFile(file)
+      setIsNewFile(true)
       const reader = new FileReader()
       reader.onload = (e) => {
         setIconPreview(e.target?.result as string)
@@ -144,11 +194,17 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
     try {
       if (validateForm()) {
         setIsLoading(true);
+        if (isNewFile) {
+          //load icono
+          const uploadResp = await uploadIconApp(iconFile!, formData?.client_id || "new_app", appData?.client_icon_url);
+          if(uploadResp.code !== 200) throw new Error("Error al cargar imagen")
+        }
         const resp = appData === null ? await createClient(formData, groupSelected) : await updateAppAction({
           description: formData?.description,
           redirect_callback: formData?.redirect_callback,
           scopes: formData?.scopes
         }, formData?.client_id ?? "");
+
         if (resp.code !== 201) throw new Error(resp.name);
         setFormData(prev => ({
           ...prev!,
@@ -156,7 +212,7 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
           client_secret: resp.data.client_secret
         }));
         addToast({
-          title: `${appData === null ? 'Creado': "Actualizado"} correctamente`,
+          title: `${appData === null ? 'Creado' : "Actualizado"} correctamente`,
           description: "",
           color: "success",
           variant: "solid"
@@ -301,7 +357,7 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
                 </div>
                 <Input
                   label="Descripción"
-                  value={formData?.description}
+                  value={formData?.description ?? ""}
                   aria-label=""
                   name="description"
                   placeholder="Aplicación web para gestión de usuarios..."

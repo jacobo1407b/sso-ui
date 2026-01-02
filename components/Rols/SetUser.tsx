@@ -3,6 +3,7 @@ import { useState } from 'react';
 
 import { Button, Chip, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Input, Avatar, CheckboxGroup, Checkbox } from "@heroui/react";
 import { UserPlus, Search, UserCheck } from "lucide-react";
+import IconComponent from '../Icon';
 
 
 interface AddUsersModalProps {
@@ -75,7 +76,12 @@ function SetUser({ isOpen, onClose, onSave, availableUsers, selectedUsers, onSel
                                     {filteredUsers.map((user) => (
                                         <Checkbox key={user.user_id} value={user.user_id} classNames={{ wrapper: "mr-3" }}>
                                             <div className="flex items-center gap-3 p-2">
-                                                <Avatar src={user.profile_picture} size="sm" name={user.name} />
+                                                <IconComponent
+                                                    app={user.user_id}
+                                                    last_update_date={user.last_update_avatar}
+                                                    icon_url={user.profile_picture}
+                                                />
+                                                
                                                 <div className="flex-1">
                                                     <p className="font-medium text-foreground">{user.name}</p>
                                                     <p className="text-sm text-default-500">{user.email}</p>

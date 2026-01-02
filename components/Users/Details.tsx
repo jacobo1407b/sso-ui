@@ -1,9 +1,11 @@
 "use client"
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useRouter } from 'next/navigation';
+import { useDB } from "@/components/IndexedDBProvider";
 import { useDisclosure, Button, Card, CardBody, Chip, Tabs, Tab } from "@heroui/react";
 import { AlertTriangle, Edit, Trash2, User, Mail, MapPin, Calendar, Phone, Activity, Clock, Eye, Shield, Upload } from "lucide-react";
 import { Download, Settings } from "lucide-react";
+import { putProfileUser } from "@/actions/createUser";
 
 import CommonModal from '@/components/Common/CommonModal'
 import UserModal from "./Modal";
@@ -23,10 +25,25 @@ interface iDetailsUserProps {
 function DetailsUser({ user, userKey, rols }: iDetailsUserProps) {
     const router = useRouter();
     const [isDragActive, setIsDragActive] = useState(false);
-    const [userProfile, setuserProfile] = useState(user.profile_picture);
+    const [userProfile, setuserProfile] = useState<string | undefined>();
+    const [profileId, setProfileId] = useState(0);
+    const db = useDB();
+
 
     const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
     const { isOpen: isCreateOpen, onOpen: onCreateOpen, onClose: onCreateClose } = useDisclosure();
+
+
+    useEffect(() => {
+        if (!db.ready) return; // 👈 esperar a que la DB esté lista
+        db.getByUser('profiles', user.user_id).then((result) => {
+
+            if (result && result?.image && result?.id) {
+                setProfileId(result.id);
+                setuserProfile(URL.createObjectURL(result.image as Blob));
+            }
+        });
+    }, [db.ready]);
 
 
     const onDragEnter = useCallback((e: React.DragEvent) => {
@@ -62,13 +79,24 @@ function DetailsUser({ user, userKey, rols }: iDetailsUserProps) {
             handleAvatarUpload(files[0])
         }
     }
-    const handleAvatarUpload = (file: File) => {
+    const handleAvatarUpload = async (file: File) => {
         if (file && file.type.startsWith("image/")) {
             // Validar tamaño (máximo 2MB)
             if (file.size > 2 * 1024 * 1024) {
                 console.error("La imagen es demasiado grande. Máximo 2MB.")
                 return
             }
+
+            const result = await putProfileUser(file, user.user_id, user.profile_picture);
+            if (result.code !== 201) throw new Error("Error al actualizar imagen");
+            const fecha = new Date(result.data.last_update_avatar).getTime();
+
+            await db.update('profiles', profileId, {
+                fecha,
+                image: file,
+                pub: user.profile_picture,
+                user_id: user.user_id
+            })
 
             const reader = new FileReader()
             reader.onload = (e) => {

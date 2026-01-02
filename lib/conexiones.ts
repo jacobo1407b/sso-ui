@@ -375,3 +375,62 @@ export async function getFederateData(client: string, user: string) {
 
     return users;
 }
+
+export async function uploadAppIcon(file: File, clientId: string, pub?: string) {
+    const token = await getAccessToken('sso_token');
+    const formData = new FormData();
+    formData.append("image", file);
+
+    // Construir la URL base
+    let url = `${urlBase}/client/file/${clientId}`;
+    if (pub !== undefined) {
+        // Agregar query param
+        const params = new URLSearchParams({ pub });
+        url += `?${params.toString()}`;
+    }
+
+    const response = await fetch(url, {
+        method: "PUT",
+        headers: {
+            'Authorization': `Bearer ${token}`
+        },
+        body: formData
+    });
+    return response;
+}
+
+export async function DownloadImageStream(pub: string) {
+    const token = await getAccessToken('sso_token');
+    const params = new URLSearchParams();
+    params.set('file', String(pub));
+    const users = await fetch(`${urlBase}/utl/file/download?${params.toString()}`, {
+        method: "GET",
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    });
+    return users;
+}
+
+export async function UpploadUserProfile(file: File, userId: string, pub?: string) {
+    const token = await getAccessToken('sso_token');
+    const formData = new FormData();
+    formData.append("image", file);
+
+    // Construir la URL base
+    let url = `${urlBase}/user/image/${userId}`;
+    if (pub !== undefined) {
+        // Agregar query param
+        const params = new URLSearchParams({ pub });
+        url += `?${params.toString()}`;
+    }
+
+    const response = await fetch(url, {
+        method: "PUT",
+        headers: {
+            'Authorization': `Bearer ${token}`
+        },
+        body: formData
+    });
+    return response;
+}

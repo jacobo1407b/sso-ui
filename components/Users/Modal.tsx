@@ -91,6 +91,7 @@ function UserModal({ isOpen, onClose, operation, user, userId }: UserModalProps)
           ...userSate,
           biografia: userSate?.biografia ?? null
         }, userId);
+        console.log(res)
         if (res.status !== 201) throw new Error(res.name)
         setUserSate(res.data)
         onClose();

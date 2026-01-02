@@ -9,6 +9,7 @@ import { cookies } from "next/headers";
 import { parseToken } from "@/utils";
 
 
+
 export const metadata: Metadata = {
   title: {
     default: "SSO UI",
@@ -28,7 +29,8 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children, }: { children: React.ReactNode; }) {
-  const cookieStore = await (await cookies()).get('sso_token')?.value
+  const cookieStore = await (await cookies()).get('sso_token')?.value;
+  
   return (
 
     <html suppressHydrationWarning lang="en">

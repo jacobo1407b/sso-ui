@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useDisclosure, Tooltip, Button, addToast } from "@heroui/react";
 import { Trash2, Eye, Pencil, PlusIcon, AlertTriangle } from "lucide-react";
@@ -30,10 +30,29 @@ function Aplication({ data, page, pageSize, totalPages, listGrants }: iAppsProps
   const [temporalData, setTemporalData] = useState<Clients>();
   const [isDeleteApp, setIsDeleteApp] = useState(false)
 
+
+  const [dataApp, setDataApp] = useState<Clients[]>([]);
+  const [pageApp, setPageApp] = useState(1);
+  const [totalPagesApp, setTotalPagesApp] = useState(0);
+  const [pageSizeApp, setPageSizeApp] = useState(0)
+
+
+
+  useEffect(() => {
+    setDataApp(data);
+    setPageApp(page);
+    setTotalPagesApp(totalPages);
+    setPageSizeApp(pageSize)
+  }, [])
+
   const handlerSelectededit = (data: Clients) => {
     setTemporalData(data);
     onEditOpen()
 
+  }
+
+  const handlerSearch = (target: string) => {
+    console.log(target)
   }
 
   const handlerDelete = (data: Clients) => {
@@ -67,6 +86,7 @@ function Aplication({ data, page, pageSize, totalPages, listGrants }: iAppsProps
         title="Gestión de Aplicaciones" />
 
       <ReusableTableCard
+        handlerSearch={handlerSearch}
         searchPlaceholder="Buscar por nombre"
         columns={[
           { key: "app_name", label: "NOMBRE" },
@@ -75,7 +95,7 @@ function Aplication({ data, page, pageSize, totalPages, listGrants }: iAppsProps
           { key: "fecha", label: "FECHA DE CREACION" },
           { key: "actions", label: "ACCIONES" },
         ]}
-        data={data}
+        data={dataApp}
         rowKey={(row) => row.client_id}
         renderRow={(row) => [
           row.app_name,
@@ -106,10 +126,10 @@ function Aplication({ data, page, pageSize, totalPages, listGrants }: iAppsProps
         ]}
         pagination={{
           page: page,
-          total: Math.ceil(totalPages / pageSize),
+          total: Math.ceil(totalPagesApp / pageSizeApp),
           onChange: (p) => console.log("Page:", p),
         }}
-        totalCount={totalPages}
+        totalCount={totalPagesApp}
         addButton={{
           label: "Crear Aplicación",
           onClick: () => onCreateOpen(),

@@ -3,6 +3,7 @@ import { useState } from "react"
 import { Button, Chip, Input, Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Pagination, User } from "@heroui/react"
 import { UserMinus, UserPlus, Search } from "lucide-react"
 import { UserRol } from "@/types"
+import AvatarCustom from "../Avatar"
 
 
 
@@ -84,13 +85,13 @@ function RolUser({ assignedUsers, onAddUsersOpen, handleRevokeUser }: iRolUserPr
                     {items.map((user) => (
                         <TableRow key={user.user_id}>
                             <TableCell>
-                                <User
-                                    avatarProps={{ radius: "lg", src: user.profile_picture }}
-                                    description={user.email}
+                                <AvatarCustom
                                     name={user.name}
-                                >
-                                    {user.email}
-                                </User>
+                                    email={user.email}
+                                    profile_picture={user.profile_picture}
+                                    last_update_avatar={user.last_update_avatar}
+                                    user_id={user.user_id}
+                                />
                             </TableCell>
                             <TableCell>
                                 <Chip variant="flat" size="sm">
