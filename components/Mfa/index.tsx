@@ -7,10 +7,13 @@ import { useRouter } from "next/navigation";
 import { Card, CardBody, CardHeader } from "@heroui/card";
 import { Input } from "@heroui/input";
 import { Button } from "@heroui/button";
-import { Avatar } from "@heroui/avatar";
 import { Shield, Smartphone, Key, Fingerprint } from "lucide-react";
-import { validateTotp } from "@/actions/preferencesAction";
-import { refreshMfa } from "@/actions/loginAction";
+import Avatar from "../Avatar";
+import { VerifyTotp } from "@/actions/ssoAction";
+import { refreshMfa } from "@/actions/authAction";
+import { DeleteSession } from "@/actions/userAction";
+import { errorMessages } from "@/lib/errorMessages";
+import { handleError } from "@/lib/errorHandler";
 
 interface MfaVerificationProps {
   userEmail?: string
@@ -18,7 +21,9 @@ interface MfaVerificationProps {
   userAvatar?: string
   availableMethods?: ("totp" | "webauthn" | "sms")[]
   totp_id: string
-  callbackUrl?: string
+  callbackUrl?: string,
+  last_update_avatar: number | null,
+  userId?: string
 }
 
 export default function MfaVerification({
@@ -27,26 +32,17 @@ export default function MfaVerification({
   userAvatar,
   availableMethods,
   totp_id,
-  callbackUrl
+  callbackUrl,
+  last_update_avatar,
+  userId
 }: MfaVerificationProps) {
   const router = useRouter()
   const [code, setCode] = useState("")
   const [isVerifying, setIsVerifying] = useState(false)
   const [error, setError] = useState("")
-  const [timeLeft, setTimeLeft] = useState(30)
   const [selectedMethod, setSelectedMethod] = useState<"totp" | "webauthn" | "sms">("totp")
   const [attempts, setAttempts] = useState(0)
   const maxAttempts = 5
-
-  // Countdown timer para el código
-  useEffect(() => {
-    if (selectedMethod === "totp" && timeLeft > 0) {
-      const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000)
-      return () => clearTimeout(timer)
-    } else if (timeLeft === 0) {
-      setTimeLeft(30) // Reset timer
-    }
-  }, [timeLeft, selectedMethod])
 
   const handleCodeChange = (value: string) => {
     // Solo permitir números y máximo 6 dígitos
@@ -70,22 +66,11 @@ export default function MfaVerification({
     setError("")
 
     try {
-      // Simular llamada a API
-      const resp = await validateTotp(totp_id, code);
-      console.log(resp)
-      //cerrar session y mandar a loguin y limpiar el state if(resp.code === 401)
-      if (resp.code == 403 && resp.name === "ERR_2FA_TOTP") {
-
-        setAttempts(attempts + 1)
-        setError(`Código incorrecto. ${maxAttempts - attempts - 1} intentos restantes.`)
-        setCode("")
+      setAttempts(attempts + 1)
+      const resp = await VerifyTotp(totp_id, code);
+      if (resp.status !== 200) {
+        throw new Error(resp.status === 401 ? resp.name : resp.code);
       }
-      if (resp.code === 403 && resp.name === "ERR_2FA_TOTP_MAX_ATTEMPTS" || resp.name === "ERR_2FA_TOTP_LOCKED") {
-        setAttempts(4)
-        setError(`Demasiados intentos fallidos: usuario bloqueado temporalmente`)
-        setCode("")
-      }
-
       if (resp.code === 200) {
         await refreshMfa();
         const url = callbackUrl || "/";
@@ -93,7 +78,21 @@ export default function MfaVerification({
       }
 
     } catch (err) {
-      setError("Error de conexión. Inténtalo de nuevo.")
+
+      const errorKey = (err as Error).message;
+      if (errorKey !== "invalid_token") {
+        const errorMsg = (errorMessages as Record<string, string>)[errorKey] || "Error de verificación. Inténtalo de nuevo.";
+        setError(errorMsg.replace("{fails}", String(maxAttempts - attempts)));
+      } else {
+        let error2 = new Error("TIMEOUT_ERROR");
+        error2.name = "401|TIMEOUT_ERROR|USER";
+        handleError(error2 as any);
+        setTimeout(async () => {
+          await DeleteSession(null);
+          router.push("/signin");
+        }, 1000);
+      }
+
     } finally {
       setIsVerifying(false)
     }
@@ -132,7 +131,13 @@ export default function MfaVerification({
 
         {/* Información del usuario */}
         <div className="text-center space-y-3">
-          <Avatar src={userAvatar} size="lg" name={userName} className="mx-auto" />
+          <Avatar
+            user_id={userId}
+            name={userName || ""}
+            email=""
+            profile_picture={userAvatar || ""}
+            last_update_avatar={last_update_avatar}
+          />
           <div>
             <p className="text-sm text-default-500">{userEmail}</p>
           </div>

@@ -1,7 +1,9 @@
+"use client";
 import { useEffect, useState } from 'react';
 import { User } from "@heroui/react";
 import { useDB } from "@/components/IndexedDBProvider";
-import { getImageBlob } from "@/actions/createUser";
+import { DownloadImage } from "@/actions/utilAction";
+import { fetcher } from '@/lib/fetcher';
 
 
 
@@ -31,7 +33,7 @@ function AvatarCustom({ name, email, profile_picture, last_update_avatar, user_i
                 }
 
                 // Caso 2 y 3: no existe o está desactualizado
-                const imgBlob = await getImageBlob(profile_picture);
+                const imgBlob = await fetcher(() => DownloadImage(profile_picture));
                 setImageUrl(URL.createObjectURL(imgBlob));
 
                 const newRecord = {

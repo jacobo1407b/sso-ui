@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Button, Input, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, addToast, Image } from "@heroui/react"
 import { QrCode, CheckCircle, AlertTriangle, } from "lucide-react";
 import { MfaTotp } from '@/types';
-import { cancelTotp, validateTotp } from '@/actions/preferencesAction';
+import { DeleteTotp, VerifyTotp } from '@/actions/ssoAction';
 
 
 
@@ -33,7 +33,7 @@ function TotpModal({ isOpen, onClose, topData, fails, setTotpEnabled }: iTotpPro
         setTotpError("")
 
 
-        const resp = await validateTotp(topData?.id ?? "", totpCode)
+        const resp = await VerifyTotp(topData?.id ?? "", totpCode)
         if (resp.code !== 200 && fails + 1 < 5) {
             setTotpError(`Código incorrecto. ${fails} fallos acumulados`)
         }
@@ -46,27 +46,12 @@ function TotpModal({ isOpen, onClose, topData, fails, setTotpEnabled }: iTotpPro
             
         }
         setIsVerifyingTotp(false)
-
-        // Simular validación (en producción esto sería una llamada al backend)
-
-
-        /*if (isValidCode) {
-            //setTotpEnabled(true)
-            
-            setTimeout(() => {
-                //onTotpClose()
-                setTotpSetupStep("qr")
-                setTotpCode("")
-            }, 11000)
-        } else {
-            setTotpError("Código incorrecto. Verifica tu aplicación autenticadora.")
-        }*/
-
         
     }
 
     const handlerCancelTotp = async () => {
-        console.log(await cancelTotp(topData?.id ?? ""))
+        const rep = await DeleteTotp(topData?.id ?? "");
+        console.log(rep);
         onClose()
     }
     return (

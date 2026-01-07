@@ -1,5 +1,5 @@
 import DetailsUser from "@/components/Users/Details";
-import { getUserDetail } from "@/lib/conexiones";
+import { UserDetail } from "@/actions/userAction";
 import { cookies } from 'next/headers';
 
 
@@ -23,7 +23,7 @@ export default async function UserPage({ params }: any) {
   }
 
   //const permisions = us.rols.map()
-  const user = await getUserDetail(currentUser.user_id);
+  const user = await UserDetail(currentUser.user_id);
 
   return <DetailsUser user={user.data} userKey={prm.id} rols={roles} />;
 }

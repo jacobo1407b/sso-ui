@@ -1,8 +1,9 @@
 import RolsPage from "@/components/Rols";
-import { getRolsAction } from "@/actions/rolsAction";
+import { GetRols } from "@/actions/rolsAction";
 
 async function Rols() {
-  const listRols = await getRolsAction(1, 20);
+  const listRols = await GetRols(1, 20, undefined);
+
   if (listRols.code !== 200) return null;
   return <RolsPage
     rols={listRols.data}

@@ -57,8 +57,22 @@ function parseToken(token?: string) {
 
 }
 
+function getCurrentYear(timeZone: string = "America/Mexico_City"): number {
+  // Usamos Intl.DateTimeFormat para respetar la zona horaria
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+  });
+
+  // Obtenemos el año como string y lo convertimos a número
+  const yearString = formatter.format(new Date());
+  return parseInt(yearString, 10);
+}
+
+
 
 export {
+  getCurrentYear,
   generatePassword,
   formateaFechaRelativa,
   generateQr,

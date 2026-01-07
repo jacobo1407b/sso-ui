@@ -5,6 +5,7 @@ import { Home, Users, X, Menu, LayoutGrid, Cog, Settings } from "lucide-react"
 import { Button } from "@heroui/button"
 import { usePathname } from "next/navigation"
 import { useEffect } from "react"
+import { getCurrentYear } from "@/utils"
 
 interface SidebarProps {
     isOpen: boolean
@@ -98,7 +99,7 @@ export function Sidebar({ isOpen, onToggle, onClose, roles }: SidebarProps) {
                 {/* Footer del Sidebar (opcional) */}
                 {isOpen && (
                     <div className="px-4 py-4 border-t border-default-200 dark:border-default-800 text-center text-sm text-default-500">
-                        © 2024 EmpresaCorp
+                        © {getCurrentYear()} EmpresaCorp
                     </div>
                 )}
             </aside>

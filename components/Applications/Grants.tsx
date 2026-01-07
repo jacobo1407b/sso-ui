@@ -3,8 +3,10 @@ import { useState } from "react";
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button, addToast } from "@heroui/react";
 import { Shield } from "lucide-react";
 import GrantsCheck from "../Common/GrantsCheck";
-import { setGrants } from "@/actions/clientAction";
+import { SetGrants } from "@/actions/clientAction";
 import { Grant } from "@/types";
+import { fetcher } from "@/lib/fetcher";
+import { handleError } from "@/lib/errorHandler";
 
 
 interface GrantsModalProps {
@@ -40,11 +42,11 @@ function GrantsModal({ isOpen, onClose, currentGrants, listGrants, client_id }: 
                     const payload = {
                         grantsType: resultado
                     }
-                    const resp = await setGrants(client_id, payload);
-                    if (resp.code !== 201) throw new Error('erro');
+                    await fetcher(() => SetGrants(client_id, payload));
+
                     addToast({
                         title: "correcto",
-                        description: "",
+                        description: "Cambios guardados exitosamente",
                         color: "success",
                         variant: "solid"
                     });
@@ -52,13 +54,8 @@ function GrantsModal({ isOpen, onClose, currentGrants, listGrants, client_id }: 
                 }
 
             }
-        } catch (error) {
-            addToast({
-                title: "Error",
-                description: "",
-                color: "danger",
-                variant: "solid"
-            });
+        } catch (error: any) {
+            handleError(error)
         } finally {
             setIsLoading(false)
         }

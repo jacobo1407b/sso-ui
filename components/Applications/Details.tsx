@@ -2,13 +2,13 @@
 import { useState } from "react";
 import { useRouter } from 'next/navigation';
 import { Button, Card, CardBody, CardHeader, Tooltip, Input, Chip, Divider, useDisclosure } from "@heroui/react";
-import { ArrowLeft, Trash2, Settings, CheckCircle, Copy, EyeOff, Eye } from "lucide-react";
+import { ArrowLeft, Trash2, CheckCircle, Copy, EyeOff, Eye } from "lucide-react";
 import { Shield, Plus, Globe, Edit, AlertTriangle } from "lucide-react";
 import { Lock, Key, Clock } from "lucide-react";
 
+import CommonModal from '@/components/Common/CommonModal';
 import IconComponent from "../Icon";
 import Grants from "./Grants";
-import CommonModal from '@/components/Common/CommonModal';
 import Modal from "./Modal";
 import { clientApp, Grant } from "@/types";
 

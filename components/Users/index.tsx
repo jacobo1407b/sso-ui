@@ -12,7 +12,7 @@ import ResetPass from "./ResetPass";
 
 import UserManagementHeader from "../Common/UserManagementHeader";
 import ReusableTableCard from "../Common/CommonTable";
-import {getUsersAction} from "@/actions/createUser";
+import {GetAll} from "@/actions/userAction";
 
 
 
@@ -69,14 +69,14 @@ export default function Users(artifact: iUsersProps) {
   }
 
   const handlerNavigation = async (page: number) => {
-    const result = await getUsersAction(page, artifact.pageSize);
+    const result = await GetAll(page, artifact.pageSize);
     setUserData(result.data);
     setTotalPages(result.totalCount);
     setPageSize(result.pageSize);
     setCurrentPage(result.page);
   }
   const handlerSearch = async (value: string) => {
-    const result = await getUsersAction(1, artifact.pageSize, value ?? undefined);
+    const result = await GetAll(1, artifact.pageSize, value ?? undefined);
     setUserData(result.data);
     setTotalPages(result.data.length === 0 ? 1 : result.data.length);
     setPageSize(result.pageSize);

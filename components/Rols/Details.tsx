@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardBody, CardHeader, Button, Chip, useDisclosure, Tabs, Tab, addToast } from "@heroui/react";
 import { ArrowLeft, Shield, Users, AlertTriangle, Eye, Crown } from "lucide-react";
-import { setUseRolAction } from "@/actions/rolsAction";
+import { SetRolUser } from "@/actions/rolsAction";
 import { RolDetails, UserData, UserRol } from "@/types"
 import Permisions from "./Permisions";
 import RolUser from "./RolUser";
@@ -60,7 +60,7 @@ export default function RoleDetails({ roleId, rolData, users }: RoleDetailsProps
       user: userId,
       type: "DELETE"
     }];
-    const result = await setUseRolAction(roleId, { rols: payload });
+    const result = await SetRolUser(roleId, { rols: payload });
     if (result.code !== 201) throw new Error("Error")
 
     setAssignedUsers((prev) => prev.filter((user) => user.user_id !== userId));
@@ -79,7 +79,7 @@ export default function RoleDetails({ roleId, rolData, users }: RoleDetailsProps
           type: "CREATE"
         }
       });
-      const result = await setUseRolAction(roleId, { rols: setter });
+      const result = await SetRolUser(roleId, { rols: setter });
       if (result.code !== 201) throw new Error("Error");
       const usersToAdd = availableUsers.filter((user) => selectedUsers.includes(user.user_id));
       const updatedUsers: any = usersToAdd.map((user) => ({

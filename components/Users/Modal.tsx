@@ -8,13 +8,12 @@ import {
   Mail,
   Phone,
   Pickaxe,
-  User,
-  Building2
+  User
 } from "lucide-react";
 import { generatePassword } from "@/utils";
 import type { DateValue } from "@internationalized/date";
 import { parseDate, today, getLocalTimeZone } from "@internationalized/date";
-import { createUser, updateUser } from "@/actions/createUser";
+import { CreateUser, UpdateUser } from "@/actions/userAction";
 
 interface UserModalProps {
   isOpen: boolean
@@ -82,12 +81,12 @@ function UserModal({ isOpen, onClose, operation, user, userId }: UserModalProps)
       userSate?.biografia
       if (esValido) {
         setisLoading(true);
-        const res = operation === "CREATE" ? await createUser({
+        const res = operation === "CREATE" ? await CreateUser({
           ...userSate,
           password,
           hire_date: datePicker?.toString() ? new Date(datePicker?.toString()) : null,
           job_title: jobUser
-        }) : await updateUser({
+        }) : await UpdateUser({
           ...userSate,
           biografia: userSate?.biografia ?? null
         }, userId);

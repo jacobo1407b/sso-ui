@@ -9,7 +9,9 @@ import { Shield, CheckCircle, Mail, User, Lock, Database } from "lucide-react";
 import UserInformation from "./UserInformation"
 import AppInformation from "./AppInformation"
 
-import { AutorizeAction } from "@/actions/loginAction"
+import { AutorizeAction } from "@/actions/authAction"
+import { fetcher } from "@/lib/fetcher"
+import { handleError } from "@/lib/errorHandler"
 
 interface OAuthConsentProps {
   // Información de la aplicación solicitante
@@ -68,14 +70,14 @@ function OAuthConsent({
   const handleApprove = async () => {
     try {
       setIsProcessing(true)
-      const resp = await AutorizeAction(clientId, state);
+      const resp = await fetcher(() => AutorizeAction(clientId, state));
       window.open(
         `${resp.redirectUri}?code=${resp.authorizationCode}&state=${state}`,
         "_blank"
       );
       router.push("/")
-    } catch (error) {
-      console.error("Error al procesar autorización:", error)
+    } catch (error: any) {
+       handleError(error)
     } finally {
       setIsProcessing(false)
     }

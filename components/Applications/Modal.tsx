@@ -7,9 +7,11 @@ import { X, Plus, CheckCircle, Copy, Globe, EyeOff, Eye, Smartphone, Monitor, Im
 import { useDB } from "../IndexedDBProvider";
 import { clientApp, Grant } from "@/types"
 
-import { createClient, updateAppAction, uploadIconApp } from "@/actions/clientAction";
+import { CreateApp, UpdateApp, UploadIcon } from "@/actions/clientAction";
+import { DownloadImage } from "@/actions/utilAction";
 import GrantsCheck from "../Common/GrantsCheck";
-import { getImageBlob } from "@/actions/createUser";
+import { fetcher } from "@/lib/fetcher";
+
 
 
 
@@ -86,7 +88,7 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
         }
 
         // Caso 2 y 3: descargar y guardar
-        const imgBlob = await getImageBlob(appData.client_icon_url);
+        const imgBlob = await fetcher(() => DownloadImage(appData.client_icon_url));
         setIconPreview(URL.createObjectURL(imgBlob));
         setIconFile(imgBlob as File);
 
@@ -194,18 +196,24 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
     try {
       if (validateForm()) {
         setIsLoading(true);
+        let resp;
+
+        if (appData === null) {
+          resp = await fetcher(() => CreateApp(formData, groupSelected));
+        } else {
+          resp = await fetcher(() => UpdateApp({
+            description: formData?.description,
+            redirect_callback: formData?.redirect_callback,
+            scopes: formData?.scopes
+          }, formData?.client_id ?? ""));
+        }
+
+
         if (isNewFile) {
           //load icono
-          const uploadResp = await uploadIconApp(iconFile!, formData?.client_id || "new_app", appData?.client_icon_url);
-          if(uploadResp.code !== 200) throw new Error("Error al cargar imagen")
+          fetcher(() => UploadIcon(iconFile!, resp.data.client_id, resp.data?.client_icon_url));
         }
-        const resp = appData === null ? await createClient(formData, groupSelected) : await updateAppAction({
-          description: formData?.description,
-          redirect_callback: formData?.redirect_callback,
-          scopes: formData?.scopes
-        }, formData?.client_id ?? "");
 
-        if (resp.code !== 201) throw new Error(resp.name);
         setFormData(prev => ({
           ...prev!,
           client_id: resp.data.client_id,

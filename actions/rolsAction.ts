@@ -1,17 +1,36 @@
 "use server";
-import { getRolsTabel, detailsRol, setRolUser } from "@/lib/conexiones";
+import { Actions } from "@/lib/conexiones";
 
-export async function getRolsAction(page?: number, pageSize?: number, cod?: string) {
-    const resp = await getRolsTabel(page, pageSize, cod);
-    return await resp.json();
+
+const context = {}
+
+export const GetRols = async (page?: number, size?: number, cod?: string) => {
+    const response = await Actions.callRest(context, {
+        endpoint: "Rols/GetRols",
+        QueryParams: {
+            page,
+            size,
+            rol_code: cod
+        }
+    });
+    return response.body;
 }
-
-export async function rolDetailAction(id: string) {
-    const resp = await detailsRol(id);
-    return await resp.json();
+export const GetRol = async (id: string) => {
+    const response = await Actions.callRest(context, {
+        endpoint: "Rols/GetRol",
+        uriParams: {
+            id
+        }
+    });
+    return response.body;
 }
-
-export async function setUseRolAction(id: string, body: any) {
-    const resp = await setRolUser(id, body);
-    return await resp.json();
+export const SetRolUser = async (id: string, body: any) => {
+    const response = await Actions.callRest(context, {
+        endpoint: "Rols/SetRolUser",
+        uriParams: {
+            id
+        },
+        body
+    });
+    return response.body;
 }

@@ -1,9 +1,9 @@
 import Aplications from "@/components/Applications";
-import { getAllClients, getListGrantAction } from "@/actions/clientAction";
+import { GetClients, GetListGrants } from "@/actions/clientAction";
 
 async function Aplication() {
-  const resp = await getAllClients(1,20);
-  const listGrants = await getListGrantAction();
+  const resp = await GetClients(1,20);
+  const listGrants = await GetListGrants();
   if(resp.code === 403) return null;
 
   return <Aplications

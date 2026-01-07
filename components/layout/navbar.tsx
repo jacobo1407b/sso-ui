@@ -10,12 +10,13 @@ import Link from "next/link";
 import { Button } from "@heroui/button";
 import { Menu } from "lucide-react"
 import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@heroui/dropdown";
-import { getImageBlob } from "@/actions/createUser";
+import { DownloadImage } from "@/actions/utilAction";
 import { Avatar } from "@heroui/avatar"
-import { ThemeSwitch } from "@/components/theme-switch";
 import { Settings, User, LogOut, HelpCircle } from "lucide-react"
-import { Logo } from "@/components/icons";
-import { deleteSessionAction } from "@/actions/preferencesAction";
+import { DeleteSession } from "@/actions/userAction";
+import { fetcher } from "@/lib/fetcher";
+import { handleError } from "@/lib/errorHandler";
+
 
 
 interface NavbarProps {
@@ -53,7 +54,8 @@ export const Navbar = ({ onSidebarToggle, url_avatar, username, last_update_avat
 
     // Caso 1 y 2: no existe o está desactualizado/sin imagen
     console.log("Descargando imagen desde la red...");
-    const imgBlob = await getImageBlob(pub);
+
+    const imgBlob = await DownloadImage(pub);;
     setBlobImage(URL.createObjectURL(imgBlob));
 
     const newRecord = {
@@ -74,8 +76,13 @@ export const Navbar = ({ onSidebarToggle, url_avatar, username, last_update_avat
 
 
   const onCloseSession = async () => {
-    await deleteSessionAction("");
-    router.push("/signin")
+    try {
+      await fetcher(() => DeleteSession(null));
+      router.push("/signin")
+    } catch (error: any) {
+      handleError(error)
+    }
+
   }
   return (
     <HeroUINavbar
@@ -93,15 +100,14 @@ export const Navbar = ({ onSidebarToggle, url_avatar, username, last_update_avat
           <Menu className="w-5 h-5" />
         </Button>
         <NavbarBrand as="li" className="gap-3 max-w-fit">
-          <Logo />
-          <p className="font-bold text-inherit">ACME</p>
+
         </NavbarBrand>
 
       </NavbarContent>
 
 
       <NavbarContent className=" basis-1 pl-4" justify="end">
-        <ThemeSwitch />
+
         {/*<Badge content="3" color="danger" size="sm" placement="top-right">
           <Button
             isIconOnly

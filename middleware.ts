@@ -1,7 +1,7 @@
 // middleware.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { refreshToken, authorize, deleteSession } from '@/lib/conexiones';
+import { flows } from './config/base';
 
 
 export async function middleware(request: NextRequest) {
@@ -43,7 +43,7 @@ export async function middleware(request: NextRequest) {
     response.cookies.delete('sso_token_expired');
     response.cookies.delete('sso_refresh');
     response.cookies.delete('sso_refresh_expired');
-    deleteSession("");
+    //deleteSession("");
     if (pathname === '/authorize') {
       const signInUrl = new URL('/signin', request.url);
       signInUrl.searchParams.set('callbackUrl', originalUrl);
@@ -58,7 +58,8 @@ export async function middleware(request: NextRequest) {
     const ip = request.headers.get('x-forwarded-for') || 'IP desconocida';
     const userAgent = request.headers.get('user-agent') ?? 'Desconocido';
 
-    const refreshed = await refreshToken(sso_refresh, ip, userAgent);
+    const refreshed = await flows.RefreshToken({ refresh_token: sso_refresh, ip, userAgent })
+
 
     if (!refreshed?.accessToken) {
       console.error("[SSO] Falló el refresh");
@@ -128,7 +129,8 @@ export async function middleware(request: NextRequest) {
   }
 
   // ✅ Validar token actual
-  const isAuthorized = await authorize(sso_token);
+  const isAuthorized = await flows.Authorize(sso_token)
+
   if (isAuthorized?.user?.log_in_status === "WAIT") return NextResponse.redirect(new URL('/mfa', request.url));
 
 

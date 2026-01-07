@@ -5,7 +5,7 @@ import { useDB } from "@/components/IndexedDBProvider";
 import { useDisclosure, Button, Card, CardBody, Chip, Tabs, Tab } from "@heroui/react";
 import { AlertTriangle, Edit, Trash2, User, Mail, MapPin, Calendar, Phone, Activity, Clock, Eye, Shield, Upload } from "lucide-react";
 import { Download, Settings } from "lucide-react";
-import { putProfileUser } from "@/actions/createUser";
+import { UploadProfile } from "@/actions/userAction";
 
 import CommonModal from '@/components/Common/CommonModal'
 import UserModal from "./Modal";
@@ -87,7 +87,7 @@ function DetailsUser({ user, userKey, rols }: iDetailsUserProps) {
                 return
             }
 
-            const result = await putProfileUser(file, user.user_id, user.profile_picture);
+            const result = await UploadProfile(file, user.user_id, user.profile_picture);
             if (result.code !== 201) throw new Error("Error al actualizar imagen");
             const fecha = new Date(result.data.last_update_avatar).getTime();
 

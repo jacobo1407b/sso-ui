@@ -7,8 +7,9 @@ import { Globe, Palette, Monitor, Sun, Moon, Save, Shield, Key, Eye, EyeOff, QrC
 import UserManagementHeader from "../Common/UserManagementHeader";
 import TotpModal from "./Totp";
 import { MfaTotp, UserDetails } from "@/types";
-import { deleteSessionAction, cancelTotp } from "@/actions/preferencesAction";
-import { totpAction, putPreferences } from '@/actions/preferencesAction';
+
+import { DeleteSession,SetPreferences} from "@/actions/userAction";
+import { GetTotp, DeleteTotp } from '@/actions/ssoAction';
 import { generateQr, formateaFechaRelativa } from "@/utils";
 
 
@@ -83,7 +84,7 @@ function Settings({ data }: iSettingsProps) {
     const handleSavePreferences = async () => {
         if (language !== data.preferences.lang || theme !== data.preferences.theme) {
             setIsChangePreferences(true);
-            const pref = await putPreferences(data.preferences.id, {
+            const pref = await SetPreferences(data.preferences.id, {
                 theme,
                 lang: language
             });
@@ -105,7 +106,7 @@ function Settings({ data }: iSettingsProps) {
 
     const handleTerminateSession = async (sessionId: string) => {
         try {
-            const resp = await deleteSessionAction(sessionId)
+            const resp = await DeleteSession(sessionId)
             if (resp.code !== 201) throw new Error("NA")
             addToast({
                 title: "Correcto",
@@ -124,7 +125,7 @@ function Settings({ data }: iSettingsProps) {
     }
 
     const handleSetupTotp = async () => {
-        const fa = await totpAction();
+        const fa = await GetTotp();
         const url = await generateQr(fa.data.otpauth_url)
         setTopData({
             ...fa.data,
@@ -143,7 +144,7 @@ function Settings({ data }: iSettingsProps) {
 
     const handleDisableTotp = async () => {
 
-        await cancelTotp(data.totp?.id ?? "")
+        await DeleteTotp(data.totp?.id ?? "")
         setTotpEnabled(false)
     }
 
@@ -521,7 +522,7 @@ function Settings({ data }: iSettingsProps) {
                                     <Avatar
                                         icon={<Monitor className="w-5 h-5" />}
                                         size="lg"
-                                        
+
                                     />
                                     <div>
                                         <div className="flex items-center gap-3 mb-1">

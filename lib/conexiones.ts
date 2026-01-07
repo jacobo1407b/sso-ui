@@ -1,451 +1,100 @@
-import { urlBase, urlToken, client_credentials, urlAuthorize, refreshSesion, authorizeApp } from "@/config/base";
+import { SERVICE_CATALOG } from "@/config/services-config";
 import getAccessToken from "./token";
-import { cookies } from 'next/headers';
 
 
-export async function authorization_code(clientId: string, state: string) {
-    const token = await getAccessToken('sso_token');
-    const formdata = authorizeApp(clientId, state);
-    const result = await fetch(`${urlAuthorize}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Authorization': `Bearer ${token}`
-        },
-        body: formdata, // enviar como string codificado
-        credentials: 'include',
-    });
-    return result;
+
+interface RestOptions {
+    endpoint: string;      // Formato: "servicio/operacion"
+    body?: any;
+    uriParams?: Record<string, string | number>;
+    QueryParams?: Record<string, string | number | undefined>;
+    headers?: Record<string, string>;
 }
 
-export async function refreshToken(refres_tok: string, ip?: string, userAgent?: string) {
-    const formdata = refreshSesion(refres_tok, ip, userAgent);
-    const result = await fetch(`${urlToken}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: formdata, // enviar como string codificado
-        credentials: 'include',
-    });
-    const resp = await result.json();
-    return {
-        ...resp,
-        status: result.status
+interface EndpointConfig {
+    endpoint: string,
+    method: string,
+    responseType: string,
+    headers: Record<string, string>;
+}
+
+export const Actions = {
+    callRest: async (context: any, options: RestOptions) => {
+        // 1. Descomponer el endpoint (ej: "reports/JobReport")
+        const [serviceKey, endPoint] = options.endpoint.split('/');
+        const service = SERVICE_CATALOG[serviceKey as keyof typeof SERVICE_CATALOG];
+
+        if (!service) {
+            return {
+                status: 404,
+                message: "Servicio no definido",
+                code: "SERVICE_NOT_DEFINED",
+                details: "SYS"
+            }
+        }
+
+        //let baseHeaders = service.servers.headers
+        const baseUrl = service.servers.baseUrl;
+        const endpontConfig: EndpointConfig = service.paths[endPoint as keyof typeof service.paths]
+        // 2. Construir URL con parámetros de ruta (uriParams)
+        if (!endpontConfig) {
+            return {
+                status: 404,
+                message: "Endpoint no definido",
+                code: "ENDPOINT_NOT_DEFINED",
+                details: "SYS"
+            }
+        }
+        let path = endpontConfig.endpoint;
+        if (options.uriParams) {
+            Object.entries(options.uriParams).forEach(([key, value]) => {
+                path = path.replace(`{${key}}`, String(value));
+            });
+
+        }
+        if (options.QueryParams) {
+
+            const cleanParams = Object.fromEntries(
+                Object.entries(options.QueryParams).filter(([_, v]) => v !== undefined && v !== null)
+            );
+
+            const query = new URLSearchParams(cleanParams as any).toString();
+            path += `?${query}`;
+        }
+        const token = await getAccessToken('sso_token');
+        const url = `${baseUrl}${path}`;
+        //  console.log("Calling URL:", url);
+        // 3. Inyectar Seguridad (SSO/Tokens) - Como lo hace VB internamente
+
+        const headers = new Headers({
+            ...endpontConfig.headers,
+            'Authorization': `Bearer ${token}`,
+        });
+        // 4. Ejecutar fetch
+        const response = await fetch(url, {
+            method: endpontConfig.method,
+            headers,
+            body: endpontConfig.method !== "GET" && options.body !== undefined ? JSON.stringify(options.body) : undefined
+        });
+        const respBody = endpontConfig.responseType === "json" ? await response.json() : await response.blob();
+
+        /*if (!response.ok) {
+            const setError = new Error(respBody.message);
+            setError.name = `${respBody.status}|${respBody.code}|${respBody.details}`;
+            throw setError;
+        }*/
+
+        return {
+            ok: response.ok,
+            status: response.status,
+            body: {
+                ...respBody,
+                status: response.status
+            },
+            headers: response.headers,
+        };
     }
-}
-export async function auth(username: string, password: string, ip?: string, userAgent?: string) {
-    const formData = client_credentials('password', { username, password }, ip, userAgent);
+};
 
-    const result = await fetch(`${urlToken}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: formData, // enviar como string codificado
-        credentials: 'include',
-    });
-    return result;
-}
 
-export async function authorize(token: string) {
-    const data = await fetch(urlAuthorize, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${token}`
-        }
-    });
-    const user = await data.json()
-    if (data.status !== 200) return {
-        next: false,
-        user: null
-    };
-    if (data.status === 200) return {
-        next: true,
-        user
-    }
-}
 
-/** */
-export async function getUsers(page = 1, pageSize = 20, user?: string) {
-    const token = await getAccessToken('sso_token');
-    const params = new URLSearchParams();
-    params.set('page', String(page));
-    params.set('pageSize', String(pageSize));
-
-    if (user != null && user !== '') {
-        params.set('user', user);
-    }
-
-    const users = await fetch(`${urlBase}/users?${params.toString()}`, {
-        method: "GET",
-        headers: {
-            'Authorization': `Bearer ${token}`
-        }
-    })
-
-    return await users.json()
-}
-
-export async function getUserDetail(user_id: string) {
-    const token = await getAccessToken('sso_token')
-
-    const user = await fetch(`${urlBase}/user/${user_id}`, {
-        method: "GET",
-        headers: {
-            'Authorization': `Bearer ${token}`
-        }
-    });
-    const us = await user.json()
-    return us;
-}
-export async function createUserServer(payload: any) {
-    const token = await getAccessToken('sso_token');
-    const user = await fetch(`${urlBase}/user`, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-    });
-    return user;
-}
-
-export async function updateUserServ(data: any, id: string) {
-    const token = await getAccessToken('sso_token');
-    const user = await fetch(`${urlBase}/user/${id}`, {
-        method: 'PUT',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-    });
-    return user;
-}
-
-export async function getDetailsUser(id: string, sesion_id: string) {
-    const token = await getAccessToken('sso_token');
-    const details = await fetch(`${urlBase}/user/details/${id}?session=${sesion_id}`, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-    })
-    return await details.json();
-}
-
-export async function updatePassword(id: string, password: string) {
-    const token = await getAccessToken('sso_token');
-    const details = await fetch(`${urlBase}/user/password/${id}`, {
-        method: 'PUT',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            pass: password
-        })
-    })
-    return details;
-}
-
-export async function deleteSession(id: string) {
-    const token = await getAccessToken('sso_token');
-    const cookieStore = await cookies();
-    const access = cookieStore.get('sso_session')?.value ?? "";
-    let idSession = id;
-    if (id === "") {
-        idSession = atob(access)
-        cookieStore.delete('sso_refresh')
-        cookieStore.delete('sso_refresh_expired')
-        cookieStore.delete('sso_session')
-        cookieStore.delete('sso_token')
-        cookieStore.delete('sso_token_expired')
-        cookieStore.delete('sso_user')
-    }
-
-    const url = new URL(`${urlBase}/user/sesion/${idSession}`);
-    if (id === "") {
-        url.searchParams.set("main", "Y");
-    }
-    console.log(url.toString());
-    return await fetch(url.toString(), {
-        method: "DELETE",
-        headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-        },
-    });
-
-}
-
-export async function generateTotp() {
-    const token = await getAccessToken('sso_token');
-    const details = await fetch(`${urlBase}/2fa/totp/generate`, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        }
-    })
-    return details;
-}
-
-export async function deleteTotp(id: string) {
-    const token = await getAccessToken('sso_token');
-    const details = await fetch(`${urlBase}/2fa/totp/cancel/${id}`, {
-        method: 'DELETE',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        }
-    })
-    return details;
-}
-
-export async function verifyTotp(id: string, code: string) {
-    const token = await getAccessToken('sso_token');
-    const validate = await fetch(`${urlBase}/2fa/totp/verify`, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            id,
-            code
-        })
-    })
-    return validate;
-}
-
-export async function setPreferences(id: string, payload: any) {
-    const token = await getAccessToken('sso_token');
-    const validate = await fetch(`${urlBase}/user/preferences/${id}`, {
-        method: 'PUT',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-    })
-    return validate;
-}
-/***CLIENTS */
-
-export async function getClients(page?: number, pageSize?: number, appName?: string) {
-    const token = await getAccessToken('sso_token');
-    const params = new URLSearchParams();
-    params.set('page', String(page || 1));
-    params.set('pageSize', String(pageSize || 20));
-
-    if (appName) {
-        params.set("q", `app_name=${appName}`)
-    }
-
-    const validate = await fetch(`${urlBase}/clients?${params.toString()}`, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        }
-    })
-    return validate;
-
-}
-
-export async function getListGrants() {
-    const token = await getAccessToken('sso_token');
-    const validate = await fetch(`${urlBase}/client/grants/list`, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        }
-    })
-    return validate;
-}
-
-export async function createApp(data: any) {
-    const token = await getAccessToken('sso_token');
-    const validate = await fetch(`${urlBase}/client`, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-    })
-    return validate;
-}
-
-export async function updateApp(data: any, id: string) {
-    const token = await getAccessToken('sso_token');
-    const validate = await fetch(`${urlBase}/client/${id}`, {
-        method: 'PUT',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-    })
-    return validate;
-}
-
-export async function deleteApp(id: string) {
-    const token = await getAccessToken('sso_token');
-    const validate = await fetch(`${urlBase}/client/${id}`, {
-        method: 'DELETE',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        }
-    })
-    return validate;
-}
-
-export async function getAppDetails(id: string) {
-    const token = await getAccessToken('sso_token');
-    const validate = await fetch(`${urlBase}/client/${id}`, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        }
-    })
-    return validate;
-}
-
-export async function setGrantsApp(id: string, payload: any) {
-    const token = await getAccessToken('sso_token');
-    const validate = await fetch(`${urlBase}/client/grants/${id}`, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-    })
-    return validate;
-}
-
-export async function getRolsTabel(page?: number, pageSize?: number, cod?: string) {
-    const token = await getAccessToken('sso_token');
-
-    const params = new URLSearchParams();
-    params.set('page', String(page || 1));
-    params.set('size', String(pageSize || 20));
-
-    if (cod) {
-        params.set("rol_code", cod)
-    }
-    const validate = await fetch(`${urlBase}/rols?${params.toString()}`, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-    })
-    return validate;
-}
-export async function detailsRol(id: string) {
-    const token = await getAccessToken('sso_token');
-    const validate = await fetch(`${urlBase}/rol/${id}`, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-    })
-    return validate;
-}
-
-export async function setRolUser(id: string, body: any) {
-    const token = await getAccessToken('sso_token');
-    const validate = await fetch(`${urlBase}/rols/${id}`, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(body)
-    })
-    return validate;
-}
-
-export async function getFederateData(client: string, user: string) {
-    const token = await getAccessToken('sso_token');
-    const params = new URLSearchParams();
-    params.set('user', String(user));
-    params.set('client', String(client));
-    const users = await fetch(`${urlBase}/sso/federated?${params.toString()}`, {
-        method: "GET",
-        headers: {
-            'Authorization': `Bearer ${token}`
-        }
-    })
-
-    return users;
-}
-
-export async function uploadAppIcon(file: File, clientId: string, pub?: string) {
-    const token = await getAccessToken('sso_token');
-    const formData = new FormData();
-    formData.append("image", file);
-
-    // Construir la URL base
-    let url = `${urlBase}/client/file/${clientId}`;
-    if (pub !== undefined) {
-        // Agregar query param
-        const params = new URLSearchParams({ pub });
-        url += `?${params.toString()}`;
-    }
-
-    const response = await fetch(url, {
-        method: "PUT",
-        headers: {
-            'Authorization': `Bearer ${token}`
-        },
-        body: formData
-    });
-    return response;
-}
-
-export async function DownloadImageStream(pub: string) {
-    const token = await getAccessToken('sso_token');
-    const params = new URLSearchParams();
-    params.set('file', String(pub));
-    const users = await fetch(`${urlBase}/utl/file/download?${params.toString()}`, {
-        method: "GET",
-        headers: {
-            'Authorization': `Bearer ${token}`
-        }
-    });
-    return users;
-}
-
-export async function UpploadUserProfile(file: File, userId: string, pub?: string) {
-    const token = await getAccessToken('sso_token');
-    const formData = new FormData();
-    formData.append("image", file);
-
-    // Construir la URL base
-    let url = `${urlBase}/user/image/${userId}`;
-    if (pub !== undefined) {
-        // Agregar query param
-        const params = new URLSearchParams({ pub });
-        url += `?${params.toString()}`;
-    }
-
-    const response = await fetch(url, {
-        method: "PUT",
-        headers: {
-            'Authorization': `Bearer ${token}`
-        },
-        body: formData
-    });
-    return response;
-}

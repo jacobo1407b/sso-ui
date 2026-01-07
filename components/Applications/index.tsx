@@ -3,15 +3,16 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useDisclosure, Tooltip, Button, addToast } from "@heroui/react";
 import { Trash2, Eye, Pencil, PlusIcon, AlertTriangle } from "lucide-react";
-import UserModal from "./Modal";
-
+import { fetcher } from "@/lib/fetcher";
+import { handleError } from "@/lib/errorHandler";
 
 import UserManagementHeader from "../Common/UserManagementHeader";
 import ReusableTableCard from "../Common/CommonTable";
-import CommonModal from '@/components/Common/CommonModal'
+import UserModal from "./Modal";
+import CommonModal from '@/components/Common/CommonModal';
 import { Clients, Grant } from "@/types";
 import { formateaFechaRelativa } from "@/utils";
-import { deleteAppAction, getAllClients } from "@/actions/clientAction";
+import { DeleteApp, GetClients } from "@/actions/clientAction";
 
 
 
@@ -58,8 +59,7 @@ function Aplication({ data, page, pageSize, totalPages, listGrants }: iAppsProps
   const onDeleteApp = async () => {
     try {
       setIsDeleteApp(true)
-      const dele = await deleteAppAction(temporalData?.client_id ?? "");
-      if (dele.code !== 201) throw new Error(dele.name);
+      await fetcher(() => DeleteApp(temporalData?.client_id ?? ""));
       addToast({
         title: "Eliminado correctamente",
         description: "",
@@ -68,14 +68,14 @@ function Aplication({ data, page, pageSize, totalPages, listGrants }: iAppsProps
       });
       setIsDeleteApp(false);
       onDeleteClose();
-    } catch (error) {
-
+    } catch (error: any) {
+      handleError(error)
     }
 
   }
 
   const handlerNavigation = async (page: number) => {
-    const result = await getAllClients(page, pageSize);
+    const result = await fetcher(() => GetClients(page, pageSize));
     setTotalPage(result.totalCount);
     setPageSizes(result.pageSize);
     setCurrentPage(result.page);
@@ -83,7 +83,7 @@ function Aplication({ data, page, pageSize, totalPages, listGrants }: iAppsProps
   }
 
   const handlerSearch = async (value: string) => {
-    const result = await getAllClients(1, pageSize, value ?? undefined);
+    const result = await fetcher(() => GetClients(1, pageSize, value ?? undefined));
     setTotalPage(result.data.length === 0 ? 1 : result.data.length);
     setPageSizes(result.pageSize);
     setCurrentPage(result.page);

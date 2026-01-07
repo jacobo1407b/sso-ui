@@ -2,11 +2,14 @@
 
 import type React from "react"
 import { useRouter } from 'next/navigation';
-import { useState } from "react"
-import { Input, addToast, Button, Card, CardBody, CardHeader } from "@heroui/react";
+import { useState } from "react";
+import { fetcher } from "@/lib/fetcher";
+import { Input, Button, Card, CardBody, CardHeader } from "@heroui/react";
 import { Mail, Eye, KeyRound, EyeOff } from "lucide-react";
 import { useDB } from "@/components/IndexedDBProvider";
-import { loginAction } from '@/actions/loginAction';
+import { loginAction } from '@/actions/authAction';
+import { handleError } from "@/lib/errorHandler";
+
 
 interface iSigningProps {
     callbackUrl?: string;
@@ -57,7 +60,7 @@ export default function LoginPage({ callbackUrl }: iSigningProps) {
 
             if (!validateForm()) return
             setIsLoading(true);
-            const res = await loginAction(email, password);
+            const res = await fetcher(() => loginAction(email, password));
             const dateProfile = res.user.last_update_avatar ? new Date(res.user.last_update_avatar).getTime() : null;
             const isStored = await db.getByUser("profiles", res.user.user_id);
             if (isStored === null) {
@@ -68,13 +71,7 @@ export default function LoginPage({ callbackUrl }: iSigningProps) {
             redirectToCallbackUrl(res, callbackUrl);
 
         } catch (error: any) {
-            console.error(error)
-            addToast({
-                title: error.message,
-                description: error.message,
-                color: "danger",
-                variant: "solid"
-            });
+            handleError(error);
         } finally {
             setIsLoading(false)
         }

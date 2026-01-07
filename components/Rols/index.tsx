@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Tooltip } from "@heroui/react";
 import { Eye } from "lucide-react";
 
-import { getRolsAction } from "@/actions/rolsAction";
+import { GetRols } from "@/actions/rolsAction";
 import UserManagementHeader from "../Common/UserManagementHeader";
 import ReusableTableCard from "../Common/CommonTable";
 import { ListRols } from "@/types";
@@ -32,7 +32,7 @@ function Rols({ rols, totalPage, page, pageSize }: iRolsProps) {
 
 
   const handlerSearch = async (value: string) => {
-    const result = await getRolsAction(1, pageSize, value ?? undefined);
+    const result = await GetRols(1, pageSize, value ?? undefined);
     setTotalPages(result.total);
     setPageSizes(result.pageSize);
     setCurrentPage(result.page);
@@ -40,7 +40,7 @@ function Rols({ rols, totalPage, page, pageSize }: iRolsProps) {
   }
 
   const handlerNavigation = async (page: number) => {
-    const result = await getRolsAction(page, pageSize);
+    const result = await GetRols(page, pageSize);
     setTotalPages(result.total);
     setPageSizes(result.pageSize);
     setCurrentPage(result.page);

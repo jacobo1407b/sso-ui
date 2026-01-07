@@ -2,7 +2,7 @@
 import OAuthConsent from "@/components/Authorize";
 import { parseToken } from "@/utils";
 import { cookies } from 'next/headers';
-import { getFederateInfo } from "@/actions/createUser";
+import { GetFederateData } from "@/actions/ssoAction";
 import { Federate } from "@/types";
 
 async function OAuthConsentPage({ searchParams }: any) {
@@ -12,7 +12,7 @@ async function OAuthConsentPage({ searchParams }: any) {
   const user = parseToken(session)
 
 
-  const { data }: { data: Federate } = await getFederateInfo(params.client_id, user.userId);
+  const { data }: { data: Federate } = await GetFederateData(params.client_id, user.userId);
 
 
 

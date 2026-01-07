@@ -1,93 +1,10 @@
 "use client"
-import { Card, CardBody, CardHeader } from "@heroui/card"
-import { Button } from "@heroui/button"
-import { Progress } from "@heroui/progress"
-import { Chip } from "@heroui/chip"
-import {
-    Users,
-    Settings,
-    Crown,
-    TrendingUp,
-    Activity,
-    Shield,
-    AlertTriangle,
-    Clock,
-    Plus,
-    Eye,
-    BarChart3,
-} from "lucide-react";
+
+import { Users, Settings, Crown, AlertTriangle } from "lucide-react";
 
 import UserManagementHeader from "../Common/UserManagementHeader";
 
-const stats = {
-    users: {
-        total: 1247,
-        active: 1089,
-        inactive: 158,
-        newThisMonth: 89,
-        growth: 12.5,
-    },
-    applications: {
-        total: 24,
-        active: 18,
-        development: 8,
-        staging: 6,
-        production: 10,
-        growth: 8.3,
-    },
-    roles: {
-        total: 12,
-        mostUsed: "Editor",
-        permissions: 156,
-        customRoles: 8,
-    },
-}
-const recentActivity = [
-    {
-        id: 1,
-        type: "user",
-        action: "Usuario creado",
-        details: "Ana García se registró en el sistema",
-        time: "Hace 2 horas",
-        icon: Users,
-        color: "text-blue-600",
-    },
-    {
-        id: 2,
-        type: "app",
-        action: "Aplicación actualizada",
-        details: "EmpresaCorp Mobile App - Nuevos scopes añadidos",
-        time: "Hace 4 horas",
-        icon: Settings,
-        color: "text-green-600",
-    },
-    {
-        id: 3,
-        type: "role",
-        action: "Rol modificado",
-        details: "Permisos del rol 'Moderador' actualizados",
-        time: "Hace 6 horas",
-        icon: Crown,
-        color: "text-purple-600",
-    },
-    {
-        id: 4,
-        type: "user",
-        action: "Acceso suspendido",
-        details: "Usuario Carlos Rodríguez - Actividad sospechosa",
-        time: "Hace 1 día",
-        icon: AlertTriangle,
-        color: "text-red-600",
-    },
-]
 
-const topRoles = [
-    { name: "Editor", users: 456, color: "bg-blue-500" },
-    { name: "Viewer", users: 289, color: "bg-green-500" },
-    { name: "Moderador", users: 178, color: "bg-purple-500" },
-    { name: "Admin", users: 45, color: "bg-red-500" },
-    { name: "Analista", users: 134, color: "bg-orange-500" },
-]
 
 export default function index() {
     return (
