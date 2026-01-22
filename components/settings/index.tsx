@@ -8,9 +8,11 @@ import UserManagementHeader from "../Common/UserManagementHeader";
 import TotpModal from "./Totp";
 import { MfaTotp, UserDetails } from "@/types";
 
-import { DeleteSession,SetPreferences} from "@/actions/userAction";
+import { DeleteSession, SetPreferences } from "@/actions/userAction";
 import { GetTotp, DeleteTotp } from '@/actions/ssoAction';
 import { generateQr, formateaFechaRelativa } from "@/utils";
+import { handleError } from "@/lib/errorHandler";
+import { fetcher } from "@/lib/fetcher";
 
 
 const supportedLanguages = [
@@ -82,32 +84,35 @@ function Settings({ data }: iSettingsProps) {
         setLanguage(e.target.value)
     }
     const handleSavePreferences = async () => {
-        if (language !== data.preferences.lang || theme !== data.preferences.theme) {
-            setIsChangePreferences(true);
-            const pref = await SetPreferences(data.preferences.id, {
-                theme,
-                lang: language
-            });
-            if (pref.code === 201) {
+        try {
+            if (language !== data.preferences.lang || theme !== data.preferences.theme) {
+                setIsChangePreferences(true);
+                const pref = await fetcher(() => SetPreferences(data.preferences.id, {
+                    theme,
+                    lang: language
+                }))
                 setTheme(theme);
-                setIsChangePreferences(false);
-            }
 
+
+            }
+        } catch (error: any) {
+            handleError(error);
+        } finally {
+            setIsChangePreferences(false);
         }
+
     }
 
 
 
     const handlePasswordChange = () => {
-        console.log("Cambiando contraseña:", passwordForm)
-        // Reset form
         setPasswordForm({ current: "", new: "", confirm: "" })
     }
 
     const handleTerminateSession = async (sessionId: string) => {
         try {
-            const resp = await DeleteSession(sessionId)
-            if (resp.code !== 201) throw new Error("NA")
+            const resp = await fetcher(() => DeleteSession(sessionId))
+
             addToast({
                 title: "Correcto",
                 description: 'Session terminada',
@@ -115,12 +120,7 @@ function Settings({ data }: iSettingsProps) {
                 variant: "solid"
             });
         } catch (error: any) {
-            addToast({
-                title: error.message,
-                description: error.message,
-                color: "danger",
-                variant: "solid"
-            });
+            handleError(error);
         }
     }
 
@@ -143,15 +143,14 @@ function Settings({ data }: iSettingsProps) {
 
 
     const handleDisableTotp = async () => {
-
         await DeleteTotp(data.totp?.id ?? "")
         setTotpEnabled(false)
     }
 
-    const handleSetupWebauthn = () => {
+    /*const handleSetupWebauthn = () => {
         setWebauthnEnabled(true)
         onWebauthnClose()
-    }
+    }*/
 
     return (
         <div className="space-y-8">

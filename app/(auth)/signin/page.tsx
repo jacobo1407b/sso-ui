@@ -13,8 +13,13 @@ async function SiginPage({ searchParams }: any) {
   if (parseData.log_in_status === "WAIT") redirect("/mfa");
   if (parseData.log_status === "SUCCESS") redirect("/");
   return (
-    <LoginPage callbackUrl={params.callbackUrl} />
+    <LoginPage
+      empresaCorp={process.env.NEXT_BUSSINESS_NAME ?? "EmpresaCorp"}
+      abr={process.env.NEXT_ABR_BUSSINESS ?? "E"}
+      callbackUrl={params.callbackUrl} />
   )
 }
 
 export default SiginPage
+
+

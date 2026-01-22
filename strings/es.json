@@ -1,0 +1,25 @@
+{
+    "login": {
+        "emailIsNull": "El correo es requerido",
+        "emailInvalid": "El correo no tiene una estructura valida",
+        "passwordIsNull": "La contraseña es requerida",
+        "passwordSmall": "La contraseña debe tener al menos 6 caracteres",
+        "labelSSO": "Sistema de Autenticación Única",
+        "labelWelcome": "Bienvenido de vuelta",
+        "labelInCredentials": "Ingresa tus credenciales para continuar",
+        "labelInputEmail": "Correo Electrónico",
+        "placeholderInputEmail": "tu@email.com",
+        "labelInputPassword": "Contraseña",
+        "placeholderInputPassword": "Ingresa tu contraseña",
+        "isLoguin": "Iniciando sesión...",
+        "buttonLoguin": "Iniciar Sesión",
+        "labelSSL": "Conexión segura SSL"
+    },
+    "mfa": {
+        "mfaSmall": "El código debe tener 6 dígitos",
+        "mfaMaxAttempts": "Demasiados intentos fallidos. Inténtalo más tarde.",
+        "requiredVefiry": "Verificación Requerida",
+        "labelAccountProtect": "Tu cuenta está protegida con autenticación de dos factores",
+        "labelsLogInCode": "Ingresa el código de 6 dígitos de tu aplicación autenticadora"
+    }
+}

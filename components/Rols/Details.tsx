@@ -9,6 +9,8 @@ import { RolDetails, UserData, UserRol } from "@/types"
 import Permisions from "./Permisions";
 import RolUser from "./RolUser";
 import SetUser from "./SetUser"
+import { handleError } from "@/lib/errorHandler";
+import { fetcher } from "@/lib/fetcher";
 
 
 
@@ -56,18 +58,22 @@ export default function RoleDetails({ roleId, rolData, users }: RoleDetailsProps
   }
 
   const handleRevokeUser = async (userId: string) => {
-    const payload = [{
-      user: userId,
-      type: "DELETE"
-    }];
-    const result = await SetRolUser(roleId, { rols: payload });
-    if (result.code !== 201) throw new Error("Error")
+    try {
+      const payload = [{
+        user: userId,
+        type: "DELETE"
+      }];
 
-    setAssignedUsers((prev) => prev.filter((user) => user.user_id !== userId));
-    const revokedUser: any = assignedUsers.find((user) => user.user_id === userId);
-    if (revokedUser) {
-      setAvailableUsers((prev) => [...prev, { ...revokedUser }])
+      const result = await fetcher(() => SetRolUser(roleId, { rols: payload }));
+      setAssignedUsers((prev) => prev.filter((user) => user.user_id !== userId));
+      const revokedUser: any = assignedUsers.find((user) => user.user_id === userId);
+      if (revokedUser) {
+        setAvailableUsers((prev) => [...prev, { ...revokedUser }])
+      }
+    } catch (error: any) {
+      handleError(error)
     }
+
   }
 
   const handleAddUsers = async () => {
@@ -79,8 +85,8 @@ export default function RoleDetails({ roleId, rolData, users }: RoleDetailsProps
           type: "CREATE"
         }
       });
-      const result = await SetRolUser(roleId, { rols: setter });
-      if (result.code !== 201) throw new Error("Error");
+      const result = await fetcher(() => SetRolUser(roleId, { rols: setter }))
+
       const usersToAdd = availableUsers.filter((user) => selectedUsers.includes(user.user_id));
       const updatedUsers: any = usersToAdd.map((user) => ({
         ...user,
@@ -96,8 +102,8 @@ export default function RoleDetails({ roleId, rolData, users }: RoleDetailsProps
         color: "success",
         variant: "solid"
       });
-    } catch (error) {
-      console.log(error)
+    } catch (error: any) {
+      handleError(error);
     }
     finally {
       setIsSetting(false)

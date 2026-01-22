@@ -30,7 +30,7 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children, }: { children: React.ReactNode; }) {
   const cookieStore = await (await cookies()).get('sso_token')?.value;
-  
+
   return (
 
     <html suppressHydrationWarning lang="en">
@@ -42,7 +42,10 @@ export default async function RootLayout({ children, }: { children: React.ReactN
         )}
       >
         <Providers themeProps={{ attribute: "class", defaultTheme: "light" }}>
-          <Layout userData={parseToken(cookieStore)}>
+          <Layout
+            abr={process.env.NEXT_ABR_BUSSINESS ?? "E"}
+            userData={parseToken(cookieStore)}
+            corpName={process.env.NEXT_BUSSINESS_NAME ?? "EmpresaCorp"}>
             {children}
           </Layout>
         </Providers>

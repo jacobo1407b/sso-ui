@@ -51,7 +51,6 @@ function TotpModal({ isOpen, onClose, topData, fails, setTotpEnabled }: iTotpPro
 
     const handlerCancelTotp = async () => {
         const rep = await DeleteTotp(topData?.id ?? "");
-        console.log(rep);
         onClose()
     }
     return (

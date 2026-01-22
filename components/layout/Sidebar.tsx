@@ -11,7 +11,9 @@ interface SidebarProps {
     isOpen: boolean
     onToggle?: () => void
     onClose?: () => void,
-    roles: Array<string>
+    roles: Array<string>,
+    corpName: string,
+    abr: string
 }
 
 
@@ -23,7 +25,7 @@ const navigationItems = [
     { name: "Ajustes", href: "/settings", icon: Settings, rols: ["ADMIN_SSO", "END_USER"] }
 ]
 
-export function Sidebar({ isOpen, onToggle, onClose, roles }: SidebarProps) {
+export function Sidebar({ isOpen, onToggle, onClose, roles, corpName, abr }: SidebarProps) {
     const pathname = usePathname()
 
     // Close sidebar on route change for mobile
@@ -58,10 +60,10 @@ export function Sidebar({ isOpen, onToggle, onClose, roles }: SidebarProps) {
                 <div className="flex items-center justify-between h-16 px-4 border-b border-default-200 dark:border-default-800">
                     {isOpen && (
                         <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md">
-                                <span className="text-white font-bold text-md">E</span>
+                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md">
+                                <span className="text-white font-bold text-md">{abr}</span>
                             </div>
-                            <p className="font-bold text-lg text-foreground">EmpresaCorp</p>
+                            <p className="font-bold text-lg text-foreground">{corpName}</p>
                         </div>
                     )}
                     <Button
@@ -99,7 +101,7 @@ export function Sidebar({ isOpen, onToggle, onClose, roles }: SidebarProps) {
                 {/* Footer del Sidebar (opcional) */}
                 {isOpen && (
                     <div className="px-4 py-4 border-t border-default-200 dark:border-default-800 text-center text-sm text-default-500">
-                        © {getCurrentYear()} EmpresaCorp
+                        © {getCurrentYear() + " " + corpName}
                     </div>
                 )}
             </aside>

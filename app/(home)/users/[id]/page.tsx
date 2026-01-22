@@ -6,6 +6,7 @@ import { cookies } from 'next/headers';
 
 export default async function UserPage({ params }: any) {
   const prm = await params;
+  
   var currentUser = {
     user_id: prm.id,
     roles: [],

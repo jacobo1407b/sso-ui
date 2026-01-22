@@ -13,8 +13,10 @@ import { handleError } from "@/lib/errorHandler";
 
 interface iSigningProps {
     callbackUrl?: string;
+    empresaCorp: string;
+    abr: string
 }
-export default function LoginPage({ callbackUrl }: iSigningProps) {
+export default function LoginPage({ callbackUrl, empresaCorp, abr }: iSigningProps) {
     const router = useRouter();
     const db = useDB();
 
@@ -65,7 +67,7 @@ export default function LoginPage({ callbackUrl }: iSigningProps) {
             const isStored = await db.getByUser("profiles", res.user.user_id);
             if (isStored === null) {
                 await db.add("profiles", { fecha: dateProfile, image: null, pub: res.user.profile_picture, user_id: res.user.user_id });
-            }else{
+            } else {
                 await db.update("profiles", isStored.id as number, { fecha: dateProfile, image: isStored.image, pub: res.user.profile_picture, user_id: res.user.user_id });
             }
             redirectToCallbackUrl(res, callbackUrl);
@@ -84,7 +86,7 @@ export default function LoginPage({ callbackUrl }: iSigningProps) {
                 <div className="flex justify-center mb-2">
                     <div className="relative">
                         <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-2xl">
-                            <span className="text-white font-bold text-2xl">E</span>
+                            <span className="text-white font-bold text-2xl">{abr}</span>
                         </div>
                         <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-white dark:border-slate-800 flex items-center justify-center">
                             <div className="w-2 h-2 bg-white rounded-full"></div>
@@ -92,7 +94,7 @@ export default function LoginPage({ callbackUrl }: iSigningProps) {
                     </div>
                 </div>
                 <div className="text-center space-y-2">
-                    <h1 className="text-2xl font-bold text-foreground">EmpresaCorp</h1>
+                    <h1 className="text-2xl font-bold text-foreground">{empresaCorp}</h1>
                     <p className="text-sm text-default-500 font-medium">Sistema de Autenticación Única</p>
                 </div>
                 <div className="flex flex-col gap-2 items-center">

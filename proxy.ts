@@ -4,7 +4,7 @@ import type { NextRequest } from 'next/server';
 import { flows } from './config/base';
 
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const originalUrl = request.nextUrl.pathname + request.nextUrl.search;
 

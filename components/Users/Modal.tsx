@@ -2,18 +2,14 @@
 import { useState, useMemo } from "react";
 import { UserData } from "@/types";
 import { Modal, ModalBody, ModalFooter, ModalContent, ModalHeader, Input } from "@heroui/react";
-import { Button, Select, SelectItem, Avatar, DatePicker, addToast } from "@heroui/react";
-import {
-  UserPlus,
-  Mail,
-  Phone,
-  Pickaxe,
-  User
-} from "lucide-react";
+import { Button, Select, SelectItem, DatePicker, addToast } from "@heroui/react";
+import { UserPlus, Mail, Phone, Pickaxe, User } from "lucide-react";
 import { generatePassword } from "@/utils";
 import type { DateValue } from "@internationalized/date";
 import { parseDate, today, getLocalTimeZone } from "@internationalized/date";
 import { CreateUser, UpdateUser } from "@/actions/userAction";
+import { fetcher } from "@/lib/fetcher";
+import { handleError } from "@/lib/errorHandler";
 
 interface UserModalProps {
   isOpen: boolean
@@ -81,28 +77,21 @@ function UserModal({ isOpen, onClose, operation, user, userId }: UserModalProps)
       userSate?.biografia
       if (esValido) {
         setisLoading(true);
-        const res = operation === "CREATE" ? await CreateUser({
+        const res = operation === "CREATE" ? await fetcher(() => CreateUser({
           ...userSate,
           password,
           hire_date: datePicker?.toString() ? new Date(datePicker?.toString()) : null,
           job_title: jobUser
-        }) : await UpdateUser({
+        })) : await fetcher(() => UpdateUser({
           ...userSate,
           biografia: userSate?.biografia ?? null
-        }, userId);
-        console.log(res)
-        if (res.status !== 201) throw new Error(res.name)
+        }, userId))
+
         setUserSate(res.data)
         onClose();
       }
     } catch (error: any) {
-      addToast({
-        title: error.message,
-        description: error.message,
-        color: "danger",
-        variant: "solid"
-      });
-
+      handleError(error);
     } finally {
       setisLoading(false)
     }
