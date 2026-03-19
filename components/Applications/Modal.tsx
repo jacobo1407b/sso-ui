@@ -88,7 +88,9 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
         }
 
         // Caso 2 y 3: descargar y guardar
-        const imgBlob = await fetcher(() => DownloadImage(appData.client_icon_url));
+
+        /*const imgBlob = await fetcher(() => DownloadImage(appData.client_icon_url));
+        console.log(imgBlob)
         setIconPreview(URL.createObjectURL(imgBlob));
         setIconFile(imgBlob as File);
 
@@ -99,12 +101,10 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
           user_id: appData.client_id
         };
         if (!result?.id) {
-          // No existe → crear
           await db.add("profiles", newRecord);
         } else {
-          // Existe pero desactualizado → actualizar
           await db.update("profiles", result.id, newRecord);
-        }
+        }*/
       } catch (err) {
         console.error("Error cargando client_icon:", err);
       }

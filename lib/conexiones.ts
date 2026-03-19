@@ -36,6 +36,7 @@ export const Actions = {
         //let baseHeaders = service.servers.headers
         const baseUrl = service.servers.baseUrl;
         const endpontConfig: EndpointConfig = service.paths[endPoint as keyof typeof service.paths]
+        console.log(endpontConfig)
         // 2. Construir URL con parámetros de ruta (uriParams)
         if (!endpontConfig) {
             return {
@@ -76,6 +77,7 @@ export const Actions = {
             headers,
             body: endpontConfig.method !== "GET" && options.body !== undefined ? JSON.stringify(options.body) : undefined
         });
+
         const respBody = endpontConfig.responseType === "json" ? await response.json() : await response.blob();
 
         /*if (!response.ok) {

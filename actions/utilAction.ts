@@ -9,5 +9,7 @@ export const DownloadImage = async (pub: string) => {
             file: pub
         }
     });
+    console.log("---------AQUI--------")
+    console.log(response)
     return response.body;
 }
