@@ -1,14 +1,13 @@
 "use client"
-import { useState, useMemo } from "react";
-import { UserData } from "@/types";
-import { Modal, ModalBody, ModalFooter, ModalContent, ModalHeader, Input } from "@heroui/react";
-import { Button, Select, SelectItem, DatePicker, addToast } from "@heroui/react";
+import { useState, useMemo, useEffect } from "react";
+import { ApiResponse, User as UserData } from "@/types";
+import { Modal, ModalBody, ModalFooter, ModalContent, ModalHeader, Input, Textarea } from "@heroui/react";
+import { Button, Select, SelectItem, DatePicker } from "@heroui/react";
 import { UserPlus, Mail, Phone, Pickaxe, User } from "lucide-react";
 import { generatePassword } from "@/utils";
-import type { DateValue } from "@internationalized/date";
-import { parseDate, today, getLocalTimeZone } from "@internationalized/date";
-import { CreateUser, UpdateUser } from "@/actions/userAction";
-import { fetcher } from "@/lib/fetcher";
+//import type { DateValue } from "@internationalized/date";
+//import { parseDate, today, getLocalTimeZone } from "@internationalized/date";
+import RequestServer from "@/lib/client/api-client";
 import { handleError } from "@/lib/errorHandler";
 
 interface UserModalProps {
@@ -17,32 +16,28 @@ interface UserModalProps {
   operation: "UPDATE" | "CREATE"
   user: UserData | null
   userId: string
+  onUpdateState: (operation: "CREATE" | "UPDATE", user: UserData) => void
+  isMain: boolean
 }
 const consultantJobs = [
-  { key: "tech_consultant", label: "Tech Consultant" },
-  { key: "business_analyst", label: "Business Analyst" },
-  { key: "strategy_consultant", label: "Strategy Consultant" },
-  { key: "data_consultant", label: "Data Consultant" },
-  { key: "security_consultant", label: "Security Consultant" },
-  { key: "cloud_architect", label: "Cloud Architect" },
-  { key: "frontend_architect", label: "Frontend Architect" },
-  { key: "backend_specialist", label: "Backend Specialist" },
-  { key: "oauth_integrator", label: "OAuth Integrator" },
-  { key: "governance_advisor", label: "Governance Advisor" },
-  { key: "devops_consultant", label: "DevOps Consultant" },
-  { key: "product_owner", label: "Product Owner" },
-  { key: "solution_designer", label: "Solution Designer" },
+  { key: "tech_consultant", label: "Consultor" },
+  { key: "sso_admin", label: "SSO Administrador" }
 ];
 
-function UserModal({ isOpen, onClose, operation, user, userId }: UserModalProps) {
-  const [userSate, setUserSate] = useState<UserData | null>(user);
+function UserModal({ isOpen, onClose, operation, user, userId, onUpdateState, isMain }: UserModalProps) {
+  const [userSate, setUserSate] = useState<UserData | null>(null);
   const [password] = useState(generatePassword(14));
   const [isLoading, setisLoading] = useState(false);
-  const [datePicker, setDatePicker] = useState<DateValue | null | undefined>(user?.userBusiness.hire_date ? parseDate(user.userBusiness.hire_date.split("T")[0]) : null);
-  const [jobUser, setJobUser] = useState(user?.userBusiness.job_title);
+  //const [datePicker, setDatePicker] = useState<DateValue | null | undefined>(user?.userBusiness.hire_date ? parseDate(user.userBusiness.hire_date.split("T")[0]) : null);
+  const [jobUser, setJobUser] = useState("");
 
+  useEffect(() => {
+    setUserSate(user);
+    setJobUser(user?.userBusiness?.job_title ?? '');
+  }, [user]);
 
   const validateEmail = (value: string) => value.match(/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i);
+  const sanitize = (str: string) => str.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
 
   const isInvalidEmail = useMemo(() => {
     if (userSate?.email === "") return false;
@@ -63,35 +58,48 @@ function UserModal({ isOpen, onClose, operation, user, userId }: UserModalProps)
       ...prev!,
       [target.name]: target.value,
     }));
-
   };
 
-  const handleSelectionChange = (e: any) => {
+  /*const handleSelectionChange = (e: any) => {
     setJobUser(e.target.value)
-  };
+  };*/
 
   const onSubmit = async () => {
     try {
       const form = document.getElementById('userForm') as HTMLFormElement;
-      const esValido = form.checkValidity();
-      userSate?.biografia
-      if (esValido) {
+      if (form.checkValidity()) {
         setisLoading(true);
-        const res = operation === "CREATE" ? await fetcher(() => CreateUser({
-          ...userSate,
-          password,
-          hire_date: datePicker?.toString() ? new Date(datePicker?.toString()) : null,
-          job_title: jobUser
-        })) : await fetcher(() => UpdateUser({
-          ...userSate,
-          biografia: userSate?.biografia ?? null
-        }, userId))
-
-        setUserSate(res.data)
+        let payload = {};
+        if (operation === "CREATE") {
+          payload = {
+            ...userSate,
+            password,
+            hire_date: new Date(),
+            job_title: jobUser,
+            username: `${sanitize(userSate?.name ?? '')}.${sanitize(userSate?.last_name ?? '')}.${new Date().getFullYear().toString().slice(-2)}`
+          }
+        } else {
+          payload = {
+            name: userSate?.name,
+            last_name: userSate?.last_name,
+            second_last_name: userSate?.second_last_name,
+            phone: userSate?.phone,
+            job_title: jobUser,
+            department: null,
+            biografia: userSate?.biografia ?? null
+          }
+        }
+        const requ = await new RequestServer<ApiResponse<UserData>>("Users/UpdateUser")
+          .setUriParams({ id: userId })
+          .setQueryParams({ operation })
+          .setPayload(payload)
+          .exec();
+        setUserSate(requ.data);
+        onUpdateState(operation, requ.data);
         onClose();
       }
     } catch (error: any) {
-      handleError(error);
+      handleError(error)
     } finally {
       setisLoading(false)
     }
@@ -112,39 +120,42 @@ function UserModal({ isOpen, onClose, operation, user, userId }: UserModalProps)
               isRequired
               label="Nombres"
               name="name"
-              defaultValue={userSate?.name}
+              value={userSate?.name ?? ''}
               placeholder="Ingresa el nombre"
               startContent={<User className="w-4 h-4 text-default-400" />}
               variant="bordered"
             />
+
             <Input
               isRequired
               name="email"
-              isDisabled={operation === "CREATE" ? false : true}
-              defaultValue={userSate?.email}
+              isDisabled={operation !== 'CREATE'}
+              value={userSate?.email ?? ''}
               label="Correo electrónico"
               placeholder="usuario@empresa.com"
               type="email"
               startContent={<Mail className="w-4 h-4 text-default-400" />}
               variant="bordered"
-              color={isInvalidEmail ? "danger" : "success"}
+              color={isInvalidEmail ? 'danger' : 'success'}
               errorMessage="Please enter a valid email"
               isInvalid={isInvalidEmail}
             />
+
             <Input
               isRequired
               label="Primer apellido"
               name="last_name"
-              defaultValue={userSate?.last_name}
+              value={userSate?.last_name ?? ''}
               placeholder="Ingresa apellidos"
               startContent={<User className="w-4 h-4 text-default-400" />}
               variant="bordered"
             />
+
             <Input
               isRequired
               label="Segundo apellido"
               name="second_last_name"
-              defaultValue={userSate?.second_last_name}
+              value={userSate?.second_last_name ?? ''}
               placeholder="Ingresa apellidos"
               startContent={<User className="w-4 h-4 text-default-400" />}
               variant="bordered"
@@ -153,71 +164,54 @@ function UserModal({ isOpen, onClose, operation, user, userId }: UserModalProps)
             <Input
               label="Teléfono"
               name="phone"
-              defaultValue={userSate?.phone}
+              value={userSate?.phone ?? ''}
               placeholder="+612 345 678"
               startContent={<Phone className="w-4 h-4 text-default-400" />}
               variant="bordered"
               isInvalid={userSate?.phone ? isPhoneInvalid : false}
               errorMessage="Ingrese un telefono valido"
-              color={userSate?.phone ? isPhoneInvalid ? "danger" : "success" : "default"}
+              color={!userSate?.phone ? 'default' : isPhoneInvalid ? 'danger' : 'success'}
             />
-            <div className="space-y-2">
-              <DatePicker
-                showMonthAndYearPickers
-                label="Fecha de ingreso"
-                name="hire_date"
-                granularity="day"
-                defaultValue={datePicker}
-                onChange={setDatePicker}
-                maxValue={today(getLocalTimeZone())}
-                selectorButtonPlacement="end"
-                isRequired
+            {isMain && (
+              <Textarea
+                variant="bordered"
+                name="biografia"
+                aria-describedby="textarea-controlled-description"
+                aria-label="Announcement"
+                placeholder="Biografia"
+                value={userSate?.biografia ?? ""}
               />
-              {/**
-               * <Select
-                className="max-w-xs"
-                defaultSelectedKeys={[user?.userBusiness?.department ?? ""]}
-                label="Seleccionar departamento"
-                startContent={<Building2 className="w-4 h-4 text-default-400" />}
-                isClearable={true} size="sm">
-                <SelectItem
-                  key="argentina"
-                  startContent={
-                    <Avatar alt="Argentina" className="w-6 h-6" src="https://flagcdn.com/ar.svg" />
-                  }
-                >
-                  Argentina
-                </SelectItem>
-              </Select>
-               */}
+            )}
 
 
-            </div>
-            <Select
-              className="max-w-xs"
-              onChange={handleSelectionChange}
-              defaultSelectedKeys={[jobUser ?? ""]}
-              label="Seleccionar puesto"
-              startContent={<Pickaxe className="w-4 h-4 text-default-400" />}
-              isClearable={true} size="sm">
-
-              {consultantJobs.map((job) => (
-                <SelectItem key={job.label}>{job.label}</SelectItem>
-              ))}
-            </Select>
             {
-              operation === "CREATE" ? (
-                <Input
-                  label="Contraseña"
-                  name="password"
-                  isReadOnly
-                  defaultValue={password}
-                  startContent={<User className="w-4 h-4 text-default-400" />}
-                  variant="bordered"
+              /**
+               *  <div className="space-y-2">
+                <DatePicker
+                  showMonthAndYearPickers
+                  label="Fecha de ingreso"
+                  name="hire_date"
+                  granularity="day"
+                  value={datePicker}
+                  onChange={setDatePicker}
+                  maxValue={today(getLocalTimeZone())}
+                  selectorButtonPlacement="end"
+                  isRequired
                 />
-              ) : null
+              </div>
+              */
             }
 
+            {operation === 'CREATE' && (
+              <Input
+                label="Contraseña"
+                name="password"
+                isReadOnly
+                value={password}
+                startContent={<User className="w-4 h-4 text-default-400" />}
+                variant="bordered"
+              />
+            )}
           </form>
         </ModalBody>
         <ModalFooter>

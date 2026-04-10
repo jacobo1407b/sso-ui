@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { Card, CardBody, CardHeader } from "@heroui/card"
 import { Button } from "@heroui/button"
 import { Shield, CheckCircle, Mail, User, Lock, Database } from "lucide-react";
@@ -10,21 +9,22 @@ import UserInformation from "./UserInformation"
 import AppInformation from "./AppInformation"
 
 import { AutorizeAction } from "@/actions/authAction"
-import { fetcher } from "@/lib/fetcher"
 import { handleError } from "@/lib/errorHandler"
 
 interface OAuthConsentProps {
   // Información de la aplicación solicitante
   appName: string
-  appLogo?: string
+  appLogo: string
   appDescription: string
+  last_update_date: number | null
 
   // Información del usuario
   userName: string
   userEmail: string
   userAvatar?: string
-
+  last_update_avatar: number | null
   clientId: string
+  code_challenge: string,
   // Permisos solicitados
   requestedScopes?: Array<{
     scope: string
@@ -34,12 +34,18 @@ interface OAuthConsentProps {
     required: boolean
   }>
   state: string
+  company?: string
+  userId: string
 }
 
 function OAuthConsent({
+  company,
   appName,
   appLogo,
+  code_challenge,
   appDescription,
+  last_update_date,
+  last_update_avatar,
   userName,
   userEmail,
   userAvatar,
@@ -60,9 +66,10 @@ function OAuthConsent({
       required: true,
     }
   ],
-  state
+  state,
+  userId
 }: OAuthConsentProps) {
-  const router = useRouter()
+
   const [isProcessing, setIsProcessing] = useState(false)
 
 
@@ -70,14 +77,11 @@ function OAuthConsent({
   const handleApprove = async () => {
     try {
       setIsProcessing(true)
-      const resp = await fetcher(() => AutorizeAction(clientId, state));
-      window.open(
-        `${resp.redirectUri}?code=${resp.authorizationCode}&state=${state}`,
-        "_blank"
-      );
-      router.push("/")
+      const resp = await AutorizeAction(clientId, state, code_challenge);
+
+      window.location.href = `${resp.redirectUri}?code=${resp.authorizationCode}&state=${state}`;
     } catch (error: any) {
-       handleError(error)
+      handleError(error)
     } finally {
       setIsProcessing(false)
     }
@@ -109,15 +113,24 @@ function OAuthConsent({
         </div>
 
         <AppInformation
+          last_update_date={last_update_date}
+          company={company}
           appDescription={appDescription}
           appLogo={appLogo}
           appName={appName}
+          client_id={clientId}
         />
       </CardHeader>
 
       <CardBody className="gap-6 px-6 pb-6">
         {/* Información del usuario */}
-        <UserInformation userAvatar={userAvatar} userEmail={userEmail} userName={userName} />
+        <UserInformation
+          userAvatar={userAvatar}
+          userEmail={userEmail}
+          userName={userName}
+          user_id={userId}
+          last_update_avatar={last_update_avatar}
+        />
 
         {/* Permisos solicitados */}
         <div className="space-y-4">

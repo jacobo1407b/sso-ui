@@ -1,15 +1,68 @@
-import React from 'react'
+import { useState, useEffect } from "react";
 import { Avatar } from "@heroui/react";
 import { Globe } from "lucide-react";
+import { useDB } from "@/components/IndexedDBProvider";
+import AvatarCustom from "../Avatar";
+import RequestServer from "@/lib/client/api-client";
 
 
 interface iAppInformationProps {
-    appLogo: string | undefined
+    appLogo: string
     appName: string
     appDescription: string
+    company?: string
+    last_update_date: number | null
+    client_id: string
 }
 
-function AppInformation({ appDescription, appLogo, appName }: iAppInformationProps) {
+function AppInformation({ appDescription, appLogo, appName, company, last_update_date, client_id }: iAppInformationProps) {
+    const db = useDB();
+    const [imageUrl, setImageUrl] = useState<string | undefined>()
+
+    useEffect(() => {
+        if (!db.ready) return;
+        if (!appLogo || !last_update_date) return;
+
+        const fetchImage = async () => {
+            try {
+                const result = await db.getByPub("profiles", appLogo);
+
+                // Caso 1: existe y está vigente
+                if (result && result.image && result.fecha === last_update_date) {
+                    setImageUrl(URL.createObjectURL(result.image as Blob));
+                    return;
+                }
+
+                // Caso 2 y 3: no existe o está desactualizado
+                const imgBlob = await new RequestServer<Blob>("Util/Download")
+                    .setQueryParams({ file: appLogo })
+                    .exec();
+
+
+                setImageUrl(URL.createObjectURL(imgBlob));
+
+                const newRecord = {
+                    fecha: last_update_date,
+                    image: imgBlob,
+                    pub: appLogo,
+                    user_id: client_id
+                };
+
+                if (!result?.id) {
+                    // No existe → crear
+                    await db.add("profiles", newRecord);
+                } else {
+                    // Existe pero desactualizado → actualizar
+                    await db.update("profiles", result.id, newRecord);
+                }
+
+            } catch (err) {
+                console.error("Error cargando imagen:", err);
+            }
+        };
+
+        fetchImage();
+    }, [db.ready, appLogo]);
     return (
         <div>
             {/* Información de la aplicación */}
@@ -17,7 +70,7 @@ function AppInformation({ appDescription, appLogo, appName }: iAppInformationPro
                 <div className="flex justify-center">
                     <div className="relative">
                         <Avatar
-                            src={appLogo}
+                            src={imageUrl}
                             size="lg"
                             name={appName}
                             className="w-20 h-20 shadow-lg border-4 border-white dark:border-slate-700"
@@ -46,7 +99,7 @@ function AppInformation({ appDescription, appLogo, appName }: iAppInformationPro
                     <span className="text-blue-600 dark:text-blue-400">{appName}</span> quiere acceder a tu cuenta
                 </h2>
                 <p className="text-sm text-default-500">
-                    Esta aplicación solicita permisos para acceder a tu información de EmpresaCorp
+                    Esta aplicación solicita permisos para acceder a tu información de {company}
                 </p>
             </div>
         </div>

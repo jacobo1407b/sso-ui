@@ -45,11 +45,6 @@ function IgTable<T>({
     const [isLoad, setIsLoad] = useState(false);
 
 
-    const onChangePage = async (page: number) => {
-        setIsLoad(true);
-        await pagination?.onChange(page);
-        setIsLoad(false);
-    }
     const onLoadSearch = async (e: any) => {
         if (e.key === "Enter" && isLoad === false) {
             setIsLoad(true);
@@ -136,7 +131,7 @@ function IgTable<T>({
                             {data.map((row) => (
                                 <TableRow key={rowKey(row)}>
                                     {renderRow(row).map((cell, idx) => (
-                                        <TableCell key={idx}>{cell}</TableCell>
+                                        <TableCell suppressHydrationWarning key={idx}>{cell}</TableCell>
                                     ))}
                                 </TableRow>
                             ))}

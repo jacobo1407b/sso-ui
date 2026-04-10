@@ -2,25 +2,32 @@
 import { useEffect, useState } from 'react';
 import { User } from "@heroui/react";
 import { useDB } from "@/components/IndexedDBProvider";
-import { DownloadImage } from "@/actions/utilAction";
-import { fetcher } from '@/lib/fetcher';
 
+
+import RequestServer from '@/lib/client/api-client';
 
 
 interface AvatarCustomProps {
     name: string;
     email: string;
-    profile_picture: string;
-    last_update_avatar: number | null;
+    profile_picture: string | null;
+    last_update_avatar_t: number | null;
     user_id?: string;
 }
-function AvatarCustom({ name, email, profile_picture, last_update_avatar, user_id }: AvatarCustomProps) {
+function AvatarCustom({
+    name,
+    email,
+    profile_picture,
+    last_update_avatar_t,
+    user_id
+}: AvatarCustomProps) {
     const db = useDB();
+    const last_update_avatar = last_update_avatar_t ? new Date(last_update_avatar_t).getTime() : null;
     const [imageUrl, setImageUrl] = useState<string | undefined>()
 
     useEffect(() => {
         if (!db.ready) return;
-        if (!profile_picture) return;
+        if (!profile_picture || !last_update_avatar) return;
 
         const fetchImage = async () => {
             try {
@@ -33,7 +40,11 @@ function AvatarCustom({ name, email, profile_picture, last_update_avatar, user_i
                 }
 
                 // Caso 2 y 3: no existe o está desactualizado
-                const imgBlob = await fetcher(() => DownloadImage(profile_picture));
+                const imgBlob = await new RequestServer<Blob>("Util/Download")
+                .setQueryParams({file:profile_picture})
+                .exec();
+
+
                 setImageUrl(URL.createObjectURL(imgBlob));
 
                 const newRecord = {

@@ -10,12 +10,13 @@ import Link from "next/link";
 import { Button } from "@heroui/button";
 import { Menu } from "lucide-react"
 import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@heroui/dropdown";
-import { DownloadImage } from "@/actions/utilAction";
+
 import { Avatar } from "@heroui/avatar"
 import { Settings, User, LogOut, HelpCircle } from "lucide-react"
-import { DeleteSession } from "@/actions/userAction";
-import { fetcher } from "@/lib/fetcher";
+
+import { logout } from "@/actions/authAction";
 import { handleError } from "@/lib/errorHandler";
+import RequestServer from "@/lib/client/api-client";
 
 
 
@@ -55,7 +56,10 @@ export const Navbar = ({ onSidebarToggle, url_avatar, username, last_update_avat
     // Caso 1 y 2: no existe o está desactualizado/sin imagen
     console.log("Descargando imagen desde la red...");
 
-    const imgBlob = await DownloadImage(pub);;
+    const imgBlob = await new RequestServer<Blob>("Util/Download")
+    .setQueryParams({file:pub})
+    .exec();
+    //const imgBlob = await DownloadImage(pub);;
     setBlobImage(URL.createObjectURL(imgBlob));
 
     const newRecord = {
@@ -77,7 +81,7 @@ export const Navbar = ({ onSidebarToggle, url_avatar, username, last_update_avat
 
   const onCloseSession = async () => {
     try {
-      await fetcher(() => DeleteSession(null));
+      await logout();
       router.push("/signin")
     } catch (error: any) {
       handleError(error)

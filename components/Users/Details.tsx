@@ -1,29 +1,31 @@
 "use client"
 import { useCallback, useState, useEffect } from "react";
-import { useRouter } from 'next/navigation';
 import { useDB } from "@/components/IndexedDBProvider";
 import { useDisclosure, Button, Card, CardBody, Chip, Tabs, Tab } from "@heroui/react";
 import { AlertTriangle, Edit, Trash2, User, Mail, MapPin, Calendar, Phone, Activity, Clock, Eye, Shield, Upload } from "lucide-react";
 import { Download, Settings } from "lucide-react";
-import { UploadProfile } from "@/actions/userAction";
 
 import CommonModal from '@/components/Common/CommonModal'
 import UserModal from "./Modal";
 
 import UserManagementHeader from "../Common/UserManagementHeader";
-import { UserData } from '@/types';
+import { ApiResponse, User as UserData } from '@/types';
 import Link from 'next/link';
+
+import RequestServer from "@/lib/client/api-client";
 
 
 
 
 interface iDetailsUserProps {
-    user: UserData
+    userData: UserData
     userKey: string,
     rols: Array<string>
+    isMain: boolean
 }
-function DetailsUser({ user, userKey, rols }: iDetailsUserProps) {
-    const router = useRouter();
+function DetailsUser({ userData, userKey, rols, isMain }: iDetailsUserProps) {
+
+    const [user, setUser] = useState<UserData | null>(null)
     const [isDragActive, setIsDragActive] = useState(false);
     const [userProfile, setuserProfile] = useState<string | undefined>();
     const [profileId, setProfileId] = useState(0);
@@ -35,15 +37,32 @@ function DetailsUser({ user, userKey, rols }: iDetailsUserProps) {
 
 
     useEffect(() => {
-        if (!db.ready) return; // 👈 esperar a que la DB esté lista
-        db.getByUser('profiles', user.user_id).then((result) => {
+        if (!db.ready) return;
+        if (!userData.profile_picture) return;
 
-            if (result && result?.image && result?.id) {
+        let objectUrl: string;
+
+        db.getByPub("profiles", userData.profile_picture).then((result) => {
+            if (result && result?.image && result?.id !== undefined) {
+                objectUrl = URL.createObjectURL(result.image as Blob);
                 setProfileId(result.id);
-                setuserProfile(URL.createObjectURL(result.image as Blob));
+                setuserProfile(objectUrl);
             }
         });
-    }, [db.ready]);
+
+        return () => {
+            if (objectUrl) URL.revokeObjectURL(objectUrl); // 👈 limpiar
+        };
+    }, [db.ready, userData.profile_picture]);
+
+    useEffect(() => {
+        setUser(userData);
+    }, [userData]);
+
+    const onUpdateState = (operation: "CREATE" | "UPDATE", user: UserData) => {
+        console.log(user)
+        setUser(user);
+    }
 
 
     const onDragEnter = useCallback((e: React.DragEvent) => {
@@ -80,16 +99,23 @@ function DetailsUser({ user, userKey, rols }: iDetailsUserProps) {
         }
     }
     const handleAvatarUpload = async (file: File) => {
+        if (!user) return;
         if (file && file.type.startsWith("image/")) {
             // Validar tamaño (máximo 2MB)
             if (file.size > 2 * 1024 * 1024) {
                 console.error("La imagen es demasiado grande. Máximo 2MB.")
                 return
             }
-
-            const result = await UploadProfile(file, user.user_id, user.profile_picture);
+            const result = await new RequestServer<ApiResponse<UserData>>("Users/UploadImage")
+                .setQueryParams({
+                    pub: user.profile_picture,
+                    id: user.user_id
+                })
+                .setPayload(file)
+                .exec()
+            //const result = await UploadProfile(file, user.user_id, user.profile_picture);
             if (result.code !== 201) throw new Error("Error al actualizar imagen");
-            const fecha = new Date(result.data.last_update_avatar).getTime();
+            const fecha = result.data.last_update_avatar
 
             await db.update('profiles', profileId, {
                 fecha,
@@ -99,6 +125,7 @@ function DetailsUser({ user, userKey, rols }: iDetailsUserProps) {
             })
 
             const reader = new FileReader()
+
             reader.onload = (e) => {
                 const newAvatar = e.target?.result as string
                 if (user) {
@@ -156,7 +183,7 @@ function DetailsUser({ user, userKey, rols }: iDetailsUserProps) {
                                     {userProfile && userProfile !== "/placeholder.svg?height=120&width=120" ? (
                                         <img
                                             src={userProfile || "/placeholder.svg"}
-                                            alt={user.name}
+                                            alt={user?.name ?? ""}
                                             className="w-full h-full object-cover"
                                         />
                                     ) : (
@@ -201,7 +228,7 @@ function DetailsUser({ user, userKey, rols }: iDetailsUserProps) {
                                 </div>
                             </div>
                             <div className="text-center md:text-left">
-                                <h2 className="text-2xl font-bold text-foreground">{user.name.split(" ")[0]} {user.last_name}</h2>
+                                <h2 className="text-2xl font-bold text-foreground">{user?.name.split(" ")[0]} {user?.last_name}</h2>
                                 <p className="text-default-500 text-lg">{user?.userBusiness?.job_title}</p>
                                 <div className="flex flex-wrap gap-2 mt-3 justify-center md:justify-start">
                                     {/*<Chip color={roleColorMap[user.role]} variant="flat" size="sm">
@@ -227,22 +254,22 @@ function DetailsUser({ user, userKey, rols }: iDetailsUserProps) {
                                     </h3>
                                     <div className="space-y-3">
 
-                                        {user.email && (
+                                        {user?.email && (
                                             <div className="flex items-center gap-3">
                                                 <Mail className="w-4 h-4 text-default-500" />
                                                 <span className="text-foreground">{user.email}</span>
                                             </div>
                                         )}
-                                        {user.phone && (
+                                        {user?.phone && (
                                             <div className="flex items-center gap-3">
                                                 <Phone className="w-4 h-4 text-default-500" />
                                                 <span className="text-foreground">{user.phone}</span>
                                             </div>
                                         )}
-                                        {user.location.city && (
+                                        {user?.location?.city && (
                                             <div className="flex items-center gap-3">
                                                 <MapPin className="w-4 h-4 text-default-500" />
-                                                <span className="text-foreground">{user?.location?.city}</span>
+                                                <span className="text-foreground">{user.location.city}</span>
                                             </div>
                                         )}
 
@@ -284,12 +311,12 @@ function DetailsUser({ user, userKey, rols }: iDetailsUserProps) {
                                         <div className="flex items-center gap-3">
                                             <Clock className="w-4 h-4 text-default-500" />
                                             <span className="text-foreground">
-                                                Último acceso: {user.last_login ? new Date(user.last_login).toLocaleString("es-ES") : 'No se ha iniciado sesión'}
+                                                Último acceso: {user?.last_login ? new Date(user.last_login).toLocaleString("es-ES") : 'No se ha iniciado sesión'}
                                             </span>
                                         </div>
                                         <div className="flex items-center gap-3">
                                             <Activity className="w-4 h-4 text-default-500" />
-                                            <span className="text-foreground">{user.sessions} inicios de sesión</span>
+                                            <span className="text-foreground">{user?.sessions ?? 0} inicios de sesión</span>
                                         </div>
                                     </div>
                                 </div>
@@ -297,7 +324,7 @@ function DetailsUser({ user, userKey, rols }: iDetailsUserProps) {
 
                             <div>
                                 <h3 className="text-lg font-semibold text-foreground mb-3">Biografía</h3>
-                                <p className="text-default-600 leading-relaxed">{user.biografia}</p>
+                                <p className="text-default-600 leading-relaxed">{user?.biografia}</p>
                             </div>
                         </div>
 
@@ -340,6 +367,7 @@ function DetailsUser({ user, userKey, rols }: iDetailsUserProps) {
                                         <h3 className="text-lg font-semibold text-foreground mb-4">Acciones Rápidas</h3>
                                         <div className="flex flex-wrap gap-3">
                                             <Button
+                                                isDisabled={true}
                                                 variant="flat"
                                                 startContent={<Download className="w-4 h-4" />}
                                                 className="bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300"
@@ -405,7 +433,9 @@ function DetailsUser({ user, userKey, rols }: iDetailsUserProps) {
                 }}
                 user={user}
                 operation='UPDATE'
-                userId={user.user_id}
+                isMain={isMain}
+                userId={user?.user_id ?? ""}
+                onUpdateState={onUpdateState}
             />
             <CommonModal
                 isOpen={isDeleteOpen}

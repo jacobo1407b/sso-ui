@@ -3,10 +3,10 @@ import { useState } from "react";
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button, addToast } from "@heroui/react";
 import { Shield } from "lucide-react";
 import GrantsCheck from "../Common/GrantsCheck";
-import { SetGrants } from "@/actions/clientAction";
+
 import { Grant } from "@/types";
-import { fetcher } from "@/lib/fetcher";
 import { handleError } from "@/lib/errorHandler";
+import RequestServer from "@/lib/client/api-client";
 
 
 interface GrantsModalProps {
@@ -15,9 +15,11 @@ interface GrantsModalProps {
     currentGrants: Array<string>,
     listGrants: Array<Grant>
     client_id: string
+    setCurrentGrants:(grants: Array<string>) => void
 }
 
-function GrantsModal({ isOpen, onClose, currentGrants, listGrants, client_id }: GrantsModalProps) {
+function GrantsModal({ isOpen, onClose, currentGrants, listGrants, client_id, setCurrentGrants }: GrantsModalProps) {
+
     const [selectedGrants, setSelectedGrants] = useState<Array<string>>(currentGrants)
     const [errorGrants, seterrorGrants] = useState("");
     const [isLoading, setIsLoading] = useState(false)
@@ -39,10 +41,11 @@ function GrantsModal({ isOpen, onClose, currentGrants, listGrants, client_id }: 
 
                 const resultado = [...deletes, ...inserts];
                 if (resultado.length !== 0) {
-                    const payload = {
-                        grantsType: resultado
-                    }
-                    await fetcher(() => SetGrants(client_id, payload));
+                    await new RequestServer("App/SetGrants")
+                        .setQueryParams({ id: client_id })
+                        .setPayload({ grantsType: resultado })
+                        .exec();
+
 
                     addToast({
                         title: "correcto",
@@ -50,6 +53,7 @@ function GrantsModal({ isOpen, onClose, currentGrants, listGrants, client_id }: 
                         color: "success",
                         variant: "solid"
                     });
+                    setCurrentGrants(selectedGrants)
                     onClose()
                 }
 
@@ -78,7 +82,6 @@ function GrantsModal({ isOpen, onClose, currentGrants, listGrants, client_id }: 
                         operationType="UPDATE"
                         errorMsg={errorGrants}
                         listGrants={listGrants}
-
                     />
                 </ModalBody>
                 <ModalFooter>

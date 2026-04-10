@@ -1,7 +1,10 @@
 @import "tailwindcss";
 input:focus-visible {
-  outline: none !important;
+    outline: none !important;
+}
+
+textarea:focus-visible {
+    outline: none !important;
 }
 
 @config "../tailwind.config.js"
-

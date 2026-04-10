@@ -4,21 +4,35 @@ function generatePassword(length: number = 12, specialPrefix = "$"): string {
   const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   const lower = "abcdefghijklmnopqrstuvwxyz";
   const digits = "0123456789";
-  const allChars = upper + lower + digits;
+  const special = "!@#%^&*_-+=?";
+  const allChars = upper + lower + digits + special;
 
-  let password = specialPrefix;
+  const getRandom = (chars: string) => chars[Math.floor(Math.random() * chars.length)];
 
-  for (let i = 0; i < length - 1; i++) {
-    const randomChar = allChars[Math.floor(Math.random() * allChars.length)];
-    password += randomChar;
-  }
+  // Garantiza al menos uno de cada tipo
+  const required = [
+    getRandom(upper),
+    getRandom(lower),
+    getRandom(digits),
+    specialPrefix, // el especial lo cubre el prefix
+  ];
 
-  return password;
+  // Rellena el resto hasta llegar al length
+  const rest = Array.from(
+    { length: length - required.length },
+    () => getRandom(allChars)
+  );
+
+  // Mezcla todo para que no sea predecible
+  return [...required, ...rest]
+    .sort(() => Math.random() - 0.5)
+    .join('');
 }
+
 function formateaFechaRelativa(fecha: Date | string | undefined): string {
   const ahora = new Date();
   if (!fecha) return '';
-  const entrada = typeof fecha === 'string' ? new Date(fecha) : fecha;
+  const entrada = typeof fecha === 'string' ? new Date(fecha) : new Date(fecha);
   const diffMs = ahora.getTime() - entrada.getTime();
   const diffMin = Math.floor(diffMs / 60000);
   const diffHoras = Math.floor(diffMin / 60);

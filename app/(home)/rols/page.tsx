@@ -1,13 +1,27 @@
 import RolsPage from "@/components/Rols";
-import { GetRols } from "@/actions/rolsAction";
+import { api } from "@/lib/api";
+
+
+
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Gestión de Roles - SSO',
+};
+
 
 async function Rols() {
-  const listRols = await GetRols(1, 20, undefined);
+
+  const listRols = await api.roles.getAll(true, {
+    page: 1,
+    size: 20,
+    rol_code: undefined
+  })
 
   if (listRols.code !== 200) return null;
   return <RolsPage
     rols={listRols.data}
-    totalPage={listRols.total}
+    totalPage={listRols.total ?? 0}
     page={listRols.page}
     pageSize={listRols.pageSize}
   />

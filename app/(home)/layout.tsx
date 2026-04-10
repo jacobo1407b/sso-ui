@@ -2,7 +2,6 @@ import "@/styles/globals.css";
 import { Metadata, Viewport } from "next";
 import clsx from "clsx";
 import { Providers } from "../providers";
-import { siteConfig } from "@/config/site";
 import { fontSans } from "@/config/fonts";
 import { Layout } from "@/components/layout";
 import { cookies } from "next/headers";
@@ -11,11 +10,6 @@ import { parseToken } from "@/utils";
 
 
 export const metadata: Metadata = {
-  title: {
-    default: "SSO UI",
-    template: `%s - ${siteConfig.name}`,
-  },
-  description: siteConfig.description,
   icons: {
     icon: "/favicon.ico",
   },

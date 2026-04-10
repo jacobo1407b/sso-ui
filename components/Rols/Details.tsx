@@ -4,13 +4,15 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardBody, CardHeader, Button, Chip, useDisclosure, Tabs, Tab, addToast } from "@heroui/react";
 import { ArrowLeft, Shield, Users, AlertTriangle, Eye, Crown } from "lucide-react";
-import { SetRolUser } from "@/actions/rolsAction";
-import { RolDetails, UserData, UserRol } from "@/types"
+
+
+import { User, RoleDetailsPs, UserRolPs } from "@/types"
 import Permisions from "./Permisions";
 import RolUser from "./RolUser";
 import SetUser from "./SetUser"
 import { handleError } from "@/lib/errorHandler";
-import { fetcher } from "@/lib/fetcher";
+import RequestServer from "@/lib/client/api-client";
+
 
 
 
@@ -20,16 +22,18 @@ import { fetcher } from "@/lib/fetcher";
 
 interface RoleDetailsProps {
   roleId: string,
-  rolData: RolDetails,
-  users: Array<UserData>
+  rolData: RoleDetailsPs,
+  users: Array<User>
 }
 
 export default function RoleDetails({ roleId, rolData, users }: RoleDetailsProps) {
   const router = useRouter()
-  const [role, setRole] = useState<RolDetails | null>(null)
+
+
+  const [role, setRole] = useState<RoleDetailsPs | null>(null)
   const [isSetting, setIsSetting] = useState(false);
-  const [assignedUsers, setAssignedUsers] = useState<UserRol[]>([])
-  const [availableUsers, setAvailableUsers] = useState<UserData[]>([])
+  const [assignedUsers, setAssignedUsers] = useState<UserRolPs[]>([])
+  const [availableUsers, setAvailableUsers] = useState<User[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedTab, setSelectedTab] = useState("overview")
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
@@ -38,23 +42,18 @@ export default function RoleDetails({ roleId, rolData, users }: RoleDetailsProps
 
   // Simular carga de datos
   useEffect(() => {
-    const loadRoleData = async () => {
-      //await new Promise((resolve) => setTimeout(resolve, 1000))
-      setRole(rolData)
-      setAssignedUsers(rolData.users)
+    setRole(rolData)
+    setAssignedUsers(rolData.users)
 
-      const filtrado = users.filter(
-        item1 => !rolData.users.some(item2 => item2.user_id === item1.user_id)
-      );
-      setAvailableUsers(filtrado)
-      setIsLoading(false)
-    }
-
-    loadRoleData()
+    const filtrado = users.filter(
+      item1 => !rolData.users.some(item2 => item2.user_id === item1.user_id)
+    );
+    setAvailableUsers(filtrado)
+    setIsLoading(false)
   }, [roleId])
 
   const handleGoBack = () => {
-    router.push("/rols")
+    router.back()
   }
 
   const handleRevokeUser = async (userId: string) => {
@@ -63,8 +62,10 @@ export default function RoleDetails({ roleId, rolData, users }: RoleDetailsProps
         user: userId,
         type: "DELETE"
       }];
-
-      const result = await fetcher(() => SetRolUser(roleId, { rols: payload }));
+      await new RequestServer("Role/AsignUsers")
+        .setQueryParams({ roleId })
+        .setPayload({ rols: payload })
+        .exec();
       setAssignedUsers((prev) => prev.filter((user) => user.user_id !== userId));
       const revokedUser: any = assignedUsers.find((user) => user.user_id === userId);
       if (revokedUser) {
@@ -85,7 +86,10 @@ export default function RoleDetails({ roleId, rolData, users }: RoleDetailsProps
           type: "CREATE"
         }
       });
-      const result = await fetcher(() => SetRolUser(roleId, { rols: setter }))
+      await new RequestServer("Role/AsignUsers")
+        .setQueryParams({ roleId })
+        .setPayload({ rols: setter })
+        .exec();
 
       const usersToAdd = availableUsers.filter((user) => selectedUsers.includes(user.user_id));
       const updatedUsers: any = usersToAdd.map((user) => ({
@@ -96,6 +100,7 @@ export default function RoleDetails({ roleId, rolData, users }: RoleDetailsProps
       setAvailableUsers((prev) => prev.filter((user) => !selectedUsers.includes(user.user_id)))
       onAddUsersClose()
       setSelectedUsers([])
+
       addToast({
         title: "Usuarios asignados",
         description: "Usuarios asignados correctamente",
@@ -103,6 +108,7 @@ export default function RoleDetails({ roleId, rolData, users }: RoleDetailsProps
         variant: "solid"
       });
     } catch (error: any) {
+      console.log(error)
       handleError(error);
     }
     finally {
@@ -135,17 +141,6 @@ export default function RoleDetails({ roleId, rolData, users }: RoleDetailsProps
     )
   }
 
-  // Agrupar permisos por categoría
-  /*const permissionsByCategory = role.permissions.reduce(
-    (acc, permission) => {
-      if (!acc[permission.category]) {
-        acc[permission.category] = []
-      }
-      acc[permission.category].push(permission)
-      return acc
-    },
-    {} as Record<string, Permission[]>,
-  )*/
 
   return (
     <div className="space-y-6">

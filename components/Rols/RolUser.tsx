@@ -2,7 +2,7 @@
 import { useState } from "react"
 import { Button, Chip, Input, Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Pagination, User } from "@heroui/react"
 import { UserMinus, UserPlus, Search } from "lucide-react"
-import { UserRol } from "@/types"
+import { UserRolPs as UserRol } from "@/types"
 import AvatarCustom from "../Avatar"
 
 
@@ -89,7 +89,7 @@ function RolUser({ assignedUsers, onAddUsersOpen, handleRevokeUser }: iRolUserPr
                                     name={user.name}
                                     email={user.email}
                                     profile_picture={user.profile_picture}
-                                    last_update_avatar={user.last_update_avatar}
+                                    last_update_avatar_t={user.last_update_avatar}
                                     user_id={user.user_id}
                                 />
                             </TableCell>

@@ -8,10 +8,12 @@ interface CustomError extends Error {
 }
 
 export function handleError(error: CustomError) {
-  const parts = error.name.split("|");
+  console.log(error)
+  const parts = error.message.split("|");
 
   // Posición 1 = código de error
   const codeKey = parts[1] || '';
+
 
   // Posición 2 = origen (USER, SYS, etc.)
   const origin = parts[2] || "";

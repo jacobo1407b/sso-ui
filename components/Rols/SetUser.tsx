@@ -1,7 +1,7 @@
-import { UserData } from '@/types';
+import { User } from '@/types';
 import { useState } from 'react';
 
-import { Button, Chip, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Input, Avatar, CheckboxGroup, Checkbox } from "@heroui/react";
+import { Button, Chip, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Input, CheckboxGroup, Checkbox } from "@heroui/react";
 import { UserPlus, Search, UserCheck } from "lucide-react";
 import IconComponent from '../Icon';
 
@@ -10,7 +10,7 @@ interface AddUsersModalProps {
     isOpen: boolean
     onClose: () => void
     onSave: () => void
-    availableUsers: UserData[]
+    availableUsers: User[]
     selectedUsers: string[]
     onSelectionChange: (users: string[]) => void
     isSetting: boolean

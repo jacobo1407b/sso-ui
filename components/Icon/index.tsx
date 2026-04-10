@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Avatar } from "@heroui/react";
 import { useDB } from "../IndexedDBProvider";
-import { DownloadImage } from "@/actions/utilAction";
 import { Settings } from "lucide-react";
-import { fetcher } from "@/lib/fetcher";
+import RequestServer from "@/lib/client/api-client";
 
 interface iIconProps {
     app: string;
@@ -17,6 +16,7 @@ function IconComponent({ app, last_update_date, icon_url }: iIconProps) {
     const [iconSrc, setIconSrc] = useState<string | null>(null);
 
     useEffect(() => {
+        if (iconSrc) return;
         if (!db.ready) return;
         if (!icon_url) return;
         const loadIcon = async () => {
@@ -29,7 +29,11 @@ function IconComponent({ app, last_update_date, icon_url }: iIconProps) {
 
             // Caso 1 y 2: no existe o está desactualizado
             console.log("Descargando icono desde la red...");
-            const imgBlob = await fetcher(() => DownloadImage(icon_url));
+
+            const imgBlob = await new RequestServer<Blob>("Util/Download")
+                .setQueryParams({ file: icon_url })
+                .exec();
+
             setIconSrc(URL.createObjectURL(imgBlob));
 
             const newRecord = {
@@ -47,7 +51,7 @@ function IconComponent({ app, last_update_date, icon_url }: iIconProps) {
         };
 
         loadIcon();
-    }, [db.ready, app, last_update_date, icon_url]);
+    }, [db.ready]);
 
     return (
         <div>

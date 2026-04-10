@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button, Input, addToast } from "@heroui/react";
 import { RotateCcwKey, KeySquare } from "lucide-react"
 import { generatePassword } from "@/utils";
-import { UpdatePassword } from "@/actions/userAction";
+//import { UpdatePassword } from "@/actions/userAction";
 
 interface UserDelete {
     isOpen: boolean,
@@ -18,8 +18,8 @@ function ResetPass({ isOpen, onClose, userId }: UserDelete) {
     const onUpdatePass = async () => {
         try {
             setIsLoading(true)
-            const result = await UpdatePassword(userId, password);
-            if (result.code !== 201) throw new Error("NA");
+            // const result = await UpdatePassword(userId, password);
+            //if (result.code !== 201) throw new Error("NA");
             addToast({
                 title: "Correcto",
                 description: "Contraseña actualizada",

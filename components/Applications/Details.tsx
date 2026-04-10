@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from 'next/navigation';
 import { Button, Card, CardBody, CardHeader, Tooltip, Input, Chip, Divider, useDisclosure } from "@heroui/react";
 import { ArrowLeft, Trash2, CheckCircle, Copy, EyeOff, Eye } from "lucide-react";
@@ -10,11 +10,13 @@ import CommonModal from '@/components/Common/CommonModal';
 import IconComponent from "../Icon";
 import Grants from "./Grants";
 import Modal from "./Modal";
-import { clientApp, Grant } from "@/types";
+import { ClientApp, Grant } from "@/types";
+import RequestServer from "@/lib/client/api-client";
+import { handleError } from "@/lib/errorHandler";
 
 
 interface iDetailsProps {
-    appOne: clientApp
+    appOne: ClientApp
     list: Array<Grant>
 }
 
@@ -40,9 +42,39 @@ export default function DetailsApp({ appOne, list }: iDetailsProps) {
     const { isOpen: isGrantsOpen, onOpen: onGrantsOpen, onClose: onGrantsClose } = useDisclosure();
     const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
 
+    const [appData, setappData] = useState<ClientApp | null>(null);
+    const [initialized, setInitialized] = useState(false);
+    const [grants, setGrants] = useState<string[]>([])
     const [showSecret, setShowSecret] = useState(false);
-    const [copiedField, setCopiedField] = useState<string | null>(null)
+    const [copiedField, setCopiedField] = useState<string | null>(null);
+    const [loadingDelete, setLoadingDelete] = useState(false);
 
+    useEffect(() => {
+        if (initialized) return;
+        setappData(appOne);
+        setGrants(appOne.grants.map((x) => x.id));
+        setInitialized(true);
+    }, [appOne]);
+
+    const handleUpdate = (operationType: "CREATE" | "UPDATE", app: ClientApp) => {
+        setappData(app);
+    }
+    const habdleDelete = async () => {
+        try {
+            setLoadingDelete(true);
+            await new RequestServer("App/DeleteApp")
+                .setUriParams({ id: appData?.client_id ?? "" })
+                .exec();
+            onDeleteClose();
+            router.back();
+        } catch (error: any) {
+            handleError(error);
+        }
+        finally {
+            setLoadingDelete(false)
+        }
+
+    }
     const handleCopy = async (text: string, field: string) => {
         try {
             await navigator.clipboard.writeText(text)
@@ -52,7 +84,19 @@ export default function DetailsApp({ appOne, list }: iDetailsProps) {
             console.error("Error al copiar:", err)
         }
     }
-
+    const handlerUpdateGrants = (grants: Array<string>) => {
+        setGrants(grants);
+        const finderGrants = grants.map((x) => {
+            const findList = list.find((c) => c.id === x);
+            return findList;
+        });
+        setappData((prev) => {
+            if (prev) {
+                return { ...prev, grants: finderGrants as Grant[] }
+            }
+            return prev;
+        });
+    }
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -71,7 +115,7 @@ export default function DetailsApp({ appOne, list }: iDetailsProps) {
                     </div>
                 </div>
                 <div className="flex gap-2">
-                    {!appOne.is_active && (
+                    {!appData?.is_active && (
                         <Button
                             color="danger"
                             variant="flat"
@@ -97,15 +141,20 @@ export default function DetailsApp({ appOne, list }: iDetailsProps) {
                         <div className="flex items-center gap-4">
                             <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
                                 {/**<Settings className="w-8 h-8 text-white" />**/}
-                                <IconComponent
-                                    app={appOne.client_id}
-                                    last_update_date={new Date(appOne.last_update_date).getTime()}
-                                    icon_url={appOne.client_icon_url}
-                                />
+                                {
+                                    appData?.client_icon_url && (
+                                        <IconComponent
+                                            app={appData.client_id}
+                                            last_update_date={new Date(appData.last_update_date).getTime()}
+                                            icon_url={appData.client_icon_url}
+                                        />
+                                    )
+                                }
+
                             </div>
                             <div>
-                                <h2 className="text-2xl font-bold text-foreground">{appOne.app_name}</h2>
-                                <p className="text-default-500 mt-1">{appOne.description}</p>
+                                <h2 className="text-2xl font-bold text-foreground">{appData?.app_name}</h2>
+                                <p className="text-default-500 mt-1">{appData?.description}</p>
                             </div>
                         </div>
                     </div>
@@ -118,12 +167,16 @@ export default function DetailsApp({ appOne, list }: iDetailsProps) {
                             <div className="space-y-3">
                                 <div>
                                     <label className="text-sm font-medium text-default-500">Propietario</label>
-                                    <p className="text-foreground">{appOne.created_by}</p>
+                                    <p className="text-foreground">{appData?.created_by}</p>
                                 </div>
-                                <div>
-                                    <label className="text-sm font-medium text-default-500">Creada el</label>
-                                    <p className="text-foreground">{new Date().toLocaleDateString("es-ES")}</p>
-                                </div>
+                                {
+                                    appData?.created_date && (
+                                        <div>
+                                            <label className="text-sm font-medium text-default-500">Creada el</label>
+                                            <p className="text-foreground">{new Date(appData?.created_date).toLocaleDateString("es-ES")}</p>
+                                        </div>
+                                    )
+                                }
 
                             </div>
                         </div>
@@ -131,76 +184,79 @@ export default function DetailsApp({ appOne, list }: iDetailsProps) {
                         {/* Credenciales */}
                         <div className="space-y-4">
                             <h3 className="text-lg font-semibold text-foreground">Credenciales</h3>
-                            <div className="space-y-4">
-                                {/* Client ID */}
-                                <div>
-                                    <label className="text-sm font-medium text-default-500 mb-2 block">Client ID</label>
-                                    <div className="flex gap-2">
-                                        <Input
-                                            value={appOne.client_id}
-                                            isReadOnly
-                                            variant="bordered"
-                                            classNames={{
-                                                input: "font-mono text-sm",
-                                            }}
-                                        />
-                                        <Tooltip content={copiedField === "clientId" ? "¡Copiado!" : "Copiar Client ID"}>
-                                            <Button
-                                                isIconOnly
-                                                variant="flat"
-                                                onPress={() => handleCopy(appOne.client_id, "clientId")}
-                                                className={`${copiedField === "clientId"
-                                                    ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
-                                                    : "bg-default-100"
-                                                    }`}
-                                            >
-                                                {copiedField === "clientId" ? (
-                                                    <CheckCircle className="w-4 h-4" />
-                                                ) : (
-                                                    <Copy className="w-4 h-4" />
-                                                )}
-                                            </Button>
-                                        </Tooltip>
-                                    </div>
-                                </div>
-
-                                {/* Client Secret */}
-                                <div>
-                                    <label className="text-sm font-medium text-default-500 mb-2 block">Client Secret</label>
-                                    <div className="flex gap-2">
-                                        <Input
-                                            value={showSecret ? appOne.client_secret : "•".repeat(appOne.client_secret.length)}
-                                            isReadOnly
-                                            variant="bordered"
-                                            classNames={{
-                                                input: "font-mono text-sm",
-                                            }}
-                                            endContent={
-                                                <Button isIconOnly variant="light" size="sm" onPress={() => setShowSecret(!showSecret)}>
-                                                    {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            {appData && (
+                                <div className="space-y-4">
+                                    {/* Client ID */}
+                                    <div>
+                                        <label className="text-sm font-medium text-default-500 mb-2 block">Client ID</label>
+                                        <div className="flex gap-2">
+                                            <Input
+                                                value={appData.client_id}
+                                                isReadOnly
+                                                variant="bordered"
+                                                classNames={{
+                                                    input: "font-mono text-sm",
+                                                }}
+                                            />
+                                            <Tooltip content={copiedField === "clientId" ? "¡Copiado!" : "Copiar Client ID"}>
+                                                <Button
+                                                    isIconOnly
+                                                    variant="flat"
+                                                    onPress={() => handleCopy(appOne.client_id, "clientId")}
+                                                    className={`${copiedField === "clientId"
+                                                        ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
+                                                        : "bg-default-100"
+                                                        }`}
+                                                >
+                                                    {copiedField === "clientId" ? (
+                                                        <CheckCircle className="w-4 h-4" />
+                                                    ) : (
+                                                        <Copy className="w-4 h-4" />
+                                                    )}
                                                 </Button>
-                                            }
-                                        />
-                                        <Tooltip content={copiedField === "clientSecret" ? "¡Copiado!" : "Copiar Client Secret"}>
-                                            <Button
-                                                isIconOnly
-                                                variant="flat"
-                                                onPress={() => handleCopy(appOne.client_secret, "clientSecret")}
-                                                className={`${copiedField === "clientSecret"
-                                                    ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
-                                                    : "bg-default-100"
-                                                    }`}
-                                            >
-                                                {copiedField === "clientSecret" ? (
-                                                    <CheckCircle className="w-4 h-4" />
-                                                ) : (
-                                                    <Copy className="w-4 h-4" />
-                                                )}
-                                            </Button>
-                                        </Tooltip>
+                                            </Tooltip>
+                                        </div>
+                                    </div>
+
+                                    {/* Client Secret */}
+                                    <div>
+                                        <label className="text-sm font-medium text-default-500 mb-2 block">Client Secret</label>
+                                        <div className="flex gap-2">
+                                            <Input
+                                                value={showSecret ? appData.client_secret : "•".repeat(appData.client_secret.length)}
+                                                isReadOnly
+                                                variant="bordered"
+                                                classNames={{
+                                                    input: "font-mono text-sm",
+                                                }}
+                                                endContent={
+                                                    <Button isIconOnly variant="light" size="sm" onPress={() => setShowSecret(!showSecret)}>
+                                                        {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                                    </Button>
+                                                }
+                                            />
+                                            <Tooltip content={copiedField === "clientSecret" ? "¡Copiado!" : "Copiar Client Secret"}>
+                                                <Button
+                                                    isIconOnly
+                                                    variant="flat"
+                                                    onPress={() => handleCopy(appData.client_secret, "clientSecret")}
+                                                    className={`${copiedField === "clientSecret"
+                                                        ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
+                                                        : "bg-default-100"
+                                                        }`}
+                                                >
+                                                    {copiedField === "clientSecret" ? (
+                                                        <CheckCircle className="w-4 h-4" />
+                                                    ) : (
+                                                        <Copy className="w-4 h-4" />
+                                                    )}
+                                                </Button>
+                                            </Tooltip>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            )}
+
                         </div>
                     </div>
                 </CardBody>
@@ -228,7 +284,7 @@ export default function DetailsApp({ appOne, list }: iDetailsProps) {
                     </CardHeader>
                     <CardBody className="pt-0 ">
                         <div className="space-y-3">
-                            {appOne.grants?.map((x) => {
+                            {appData?.grants?.map((x) => {
                                 return (
                                     <div
                                         key={x.id}
@@ -261,7 +317,7 @@ export default function DetailsApp({ appOne, list }: iDetailsProps) {
 
                                 <div key="1" className="flex items-center gap-2">
                                     <Chip variant="flat" size="sm" className="font-mono text-xs">
-                                        {appOne.redirect_callback}
+                                        {appData?.redirect_callback}
                                     </Chip>
                                 </div>
 
@@ -286,23 +342,33 @@ export default function DetailsApp({ appOne, list }: iDetailsProps) {
                     </CardBody>
                 </Card>
             </div>
+            {
+                appData && (
+                    <Grants
+                        isOpen={isGrantsOpen}
+                        onClose={onGrantsClose}
+                        currentGrants={grants}
+                        listGrants={list}
+                        client_id={appData.client_id}
+                        setCurrentGrants={handlerUpdateGrants}
+                    />
+                )
+            }
 
-            <Grants
-                isOpen={isGrantsOpen}
-                onClose={onGrantsClose}
-                currentGrants={appOne?.grants?.map((x) => x.id) ?? []}
-                listGrants={list}
-                client_id={appOne.client_id}
-            />
-            <Modal
-                isOpen={isEditOpen}
-                onClose={onEditClose}
-                appData={appOne}
-                selectedGrants={appOne?.grants?.map((x) => x.id) ?? []}
-                imageDownloaded={appOne.client_icon_url}
-                listGrants={list}
-            />
+            {
+                appData && (
+                    <Modal
+                        isOpen={isEditOpen}
+                        onClose={onEditClose}
+                        appData={appData}
+                        selectedGrants={appData?.grants?.map((x) => x.id) ?? []}
+                        listGrants={list}
+                        handlerUpdate={handleUpdate}
 
+                    />
+
+                )
+            }
             <CommonModal
                 isOpen={isDeleteOpen}
                 onClose={onDeleteClose}
@@ -323,7 +389,7 @@ export default function DetailsApp({ appOne, list }: iDetailsProps) {
                         <Button variant="light" onPress={onDeleteClose}>
                             Cancelar
                         </Button>
-                        <Button color="danger" >
+                        <Button color="danger" isLoading={loadingDelete} onPress={habdleDelete}>
                             Eliminar permanentemente
                         </Button>
                     </>

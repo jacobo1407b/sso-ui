@@ -1,7 +1,13 @@
-"use server"
 import LoginPage from "@/components/Signin/login";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+
+
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Iniciar Sesión - SSO',
+};
 
 async function SiginPage({ searchParams }: any) {
   const params = await searchParams;

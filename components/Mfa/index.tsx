@@ -2,18 +2,18 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardBody, CardHeader } from "@heroui/card";
 import { Input } from "@heroui/input";
 import { Button } from "@heroui/button";
 import { Shield, Smartphone, Key, Fingerprint } from "lucide-react";
 import Avatar from "../Avatar";
-import { VerifyTotp } from "@/actions/ssoAction";
-import { refreshMfa } from "@/actions/authAction";
-import { DeleteSession } from "@/actions/userAction";
+
+import { refreshMfa, logout } from "@/actions/authAction";
+
 import { errorMessages } from "@/lib/errorMessages";
-import { handleError } from "@/lib/errorHandler";
+import RequestServer from "@/lib/client/api-client";
 
 interface MfaVerificationProps {
   userEmail?: string
@@ -23,7 +23,8 @@ interface MfaVerificationProps {
   totp_id: string
   callbackUrl?: string,
   last_update_avatar: number | null,
-  userId?: string
+  userId?: string,
+  company?: string
 }
 
 export default function MfaVerification({
@@ -34,7 +35,8 @@ export default function MfaVerification({
   totp_id,
   callbackUrl,
   last_update_avatar,
-  userId
+  userId,
+  company
 }: MfaVerificationProps) {
   const router = useRouter()
   const [code, setCode] = useState("")
@@ -45,53 +47,47 @@ export default function MfaVerification({
   const maxAttempts = 5
 
   const handleCodeChange = (value: string) => {
-    // Solo permitir números y máximo 6 dígitos
     const numericValue = value.replace(/\D/g, "").slice(0, 6)
     setCode(numericValue)
     if (error) setError("")
   }
 
   const handleVerification = async () => {
-    if (code.length !== 6) {
-      setError("El código debe tener 6 dígitos")
-      return
-    }
 
-    if (attempts >= maxAttempts) {
-      setError("Demasiados intentos fallidos. Inténtalo más tarde.")
-      return
-    }
-
-    setIsVerifying(true)
-    setError("")
 
     try {
+      if (code.length !== 6) throw new Error("400|LONG_CODE|USER");
+
+      if (attempts >= maxAttempts) throw new Error("400|ERR_2FA_TOTP_MAX_ATTEMPTS|USER")
+
+      setIsVerifying(true)
+      setError("")
       setAttempts(attempts + 1)
-      const resp = await VerifyTotp(totp_id, code);
-      if (resp.status !== 200) {
-        throw new Error(resp.status === 401 ? resp.name : resp.code);
-      }
-      if (resp.code === 200) {
-        await refreshMfa();
-        const url = callbackUrl || "/";
-        router.push(url);
-      }
+      await new RequestServer("Mfa/verify")
+        .setPayload({ id: totp_id, code: code })
+        .exec();
+      await refreshMfa();
+      const url = callbackUrl || "/";
+      router.push(url);
 
-    } catch (err) {
-
-      const errorKey = (err as Error).message;
-      if (errorKey !== "invalid_token") {
-        const errorMsg = (errorMessages as Record<string, string>)[errorKey] || "Error de verificación. Inténtalo de nuevo.";
+    } catch (error: any) {
+      console.log(error)
+      const [status, code, user] = error.message.split("|");
+      const errorMsg = (errorMessages as Record<string, string>)[code] || "Error de verificación. Inténtalo de nuevo.";
+      if (code === "ERR_RETRIEVING_USER") {
         setError(errorMsg.replace("{fails}", String(maxAttempts - attempts)));
       } else {
-        let error2 = new Error("TIMEOUT_ERROR");
+        setError(errorMsg);
+      }
+      /**
+       *  let error2 = new Error("TIMEOUT_ERROR");
         error2.name = "401|TIMEOUT_ERROR|USER";
         handleError(error2 as any);
         setTimeout(async () => {
-          await DeleteSession(null);
+          await logout()
           router.push("/signin");
         }, 1000);
-      }
+       */
 
     } finally {
       setIsVerifying(false)
@@ -136,7 +132,7 @@ export default function MfaVerification({
             name={userName || ""}
             email=""
             profile_picture={userAvatar || ""}
-            last_update_avatar={last_update_avatar}
+            last_update_avatar_t={last_update_avatar}
           />
           <div>
             <p className="text-sm text-default-500">{userEmail}</p>
@@ -231,7 +227,7 @@ export default function MfaVerification({
                     <p className="text-sm font-medium text-blue-700 dark:text-blue-400 mb-1">¿No ves el código?</p>
                     <p className="text-xs text-blue-600 dark:text-blue-400">
                       Abre tu aplicación autenticadora (Google Authenticator, Authy, Microsoft Authenticator) y busca
-                      la entrada de EmpresaCorp.
+                      la entrada de <b>{company}</b>.
                     </p>
                   </div>
                 </div>

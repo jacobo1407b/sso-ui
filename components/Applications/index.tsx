@@ -3,21 +3,24 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useDisclosure, Tooltip, Button, addToast } from "@heroui/react";
 import { Trash2, Eye, Pencil, PlusIcon, AlertTriangle } from "lucide-react";
-import { fetcher } from "@/lib/fetcher";
 import { handleError } from "@/lib/errorHandler";
 
 import UserManagementHeader from "../Common/UserManagementHeader";
 import ReusableTableCard from "../Common/CommonTable";
 import UserModal from "./Modal";
 import CommonModal from '@/components/Common/CommonModal';
-import { Clients, Grant } from "@/types";
+
+import RequestServer from "@/lib/client/api-client";
+
 import { formateaFechaRelativa } from "@/utils";
-import { DeleteApp, GetClients } from "@/actions/clientAction";
+
+
+import { ApiResponse, ClientApp, Grant } from "@/types";
 
 
 
 interface iAppsProps {
-  data: Array<Clients>,
+  data: Array<ClientApp>,
   page: number,
   pageSize: number,
   totalPages: number,
@@ -28,38 +31,49 @@ function Aplication({ data, page, pageSize, totalPages, listGrants }: iAppsProps
   const { isOpen: isCreateOpen, onOpen: onCreateOpen, onClose: onCreateClose } = useDisclosure();
   const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
   const { isOpen: isEditOpen, onOpen: onEditOpen, onClose: onEditClose } = useDisclosure()
-  const [temporalData, setTemporalData] = useState<Clients>();
+  const [temporalData, setTemporalData] = useState<ClientApp>();
   const [isDeleteApp, setIsDeleteApp] = useState(false)
 
 
-  const [totalPage, setTotalPage] = useState(0);
-  const [pageSizes, setPageSizes] = useState(1);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [clientsData, setclientsData] = useState<Array<Clients>>([]);
+  const [totalPage, setTotalPage] = useState(totalPages);
+  const [pageSizes, setPageSizes] = useState(pageSize);
+  const [currentPage, setCurrentPage] = useState(page);
+  const [clientsData, setclientsData] = useState<Array<ClientApp>>(data);
 
-  useEffect(() => {
+  /*useEffect(() => {
     setTotalPage(totalPages);
     setPageSizes(pageSize);
     setCurrentPage(page);
     setclientsData(data);
-  }, [])
+  }, [])*/
+  //actualizar el arreglo de estados o agregar nuevo registro dependiendo el operation type
+  const handlerUpdate = (operationType: "CREATE" | "UPDATE", app: ClientApp) => {
+    setclientsData(prev => {
+      if (operationType === "CREATE") return [app, ...prev];
+      if (operationType === "UPDATE") return prev.map(c => c.client_id === app.client_id ? app : c);
+      return prev; // 👈 fallback que satisface a TypeScript
+    });
+  };
 
-
-  const handlerSelectededit = (data: Clients) => {
+  const handlerSelectededit = (data: ClientApp) => {
     setTemporalData(data);
     onEditOpen()
-
   }
 
-  const handlerDelete = (data: Clients) => {
+  const handlerDelete = (data: ClientApp) => {
     setTemporalData(data);
     onDeleteOpen()
   }
 
   const onDeleteApp = async () => {
     try {
-      setIsDeleteApp(true)
-      await fetcher(() => DeleteApp(temporalData?.client_id ?? ""));
+      setIsDeleteApp(true);
+      if (!temporalData?.client_id) throw new Error("400|Client ID no encontrado|SYS");
+      await new RequestServer("App/DeleteApp")
+        .setUriParams({ id: temporalData.client_id })
+        .exec();
+      setclientsData(prev => prev.filter(c => c.client_id !== temporalData.client_id));
+      setTemporalData(undefined);
       addToast({
         title: "Eliminado correctamente",
         description: "",
@@ -75,7 +89,10 @@ function Aplication({ data, page, pageSize, totalPages, listGrants }: iAppsProps
   }
 
   const handlerNavigation = async (page: number) => {
-    const result = await fetcher(() => GetClients(page, pageSize));
+    const result = await new RequestServer<ApiResponse<ClientApp[]>>("App/GetAll")
+      .setQueryParams({ page, pageSize })
+      .exec();
+
     setTotalPage(result.totalCount);
     setPageSizes(result.pageSize);
     setCurrentPage(result.page);
@@ -83,7 +100,13 @@ function Aplication({ data, page, pageSize, totalPages, listGrants }: iAppsProps
   }
 
   const handlerSearch = async (value: string) => {
-    const result = await fetcher(() => GetClients(1, pageSize, value ?? undefined));
+    const q = value ? `app_name=${value}` : undefined;
+    //const result = await fetcher(() => GetClients(1, pageSize, value ?? undefined));
+
+    const result = await new RequestServer<ApiResponse<ClientApp[]>>("App/GetAll")
+      .setQueryParams({ page, pageSize, q })
+      .exec();
+
     setTotalPage(result.data.length === 0 ? 1 : result.data.length);
     setPageSizes(result.pageSize);
     setCurrentPage(result.page);
@@ -156,8 +179,8 @@ function Aplication({ data, page, pageSize, totalPages, listGrants }: iAppsProps
           onCreateClose()
         }}
         appData={null}
+        handlerUpdate={handlerUpdate}
         selectedGrants={[]}
-        imageDownloaded=""
         listGrants={listGrants}
       />
 
@@ -180,14 +203,19 @@ function Aplication({ data, page, pageSize, totalPages, listGrants }: iAppsProps
           </>
         }
       />
-      <UserModal
-        listGrants={listGrants}
-        isOpen={isEditOpen}
-        onClose={onEditClose}
-        appData={temporalData ?? null}
-        selectedGrants={temporalData?.grants.map((x) => x.id) ?? []}
-        imageDownloaded={temporalData?.client_icon_url ?? ""}
-      />
+      {
+        temporalData?.grants && (
+          <UserModal
+            listGrants={listGrants}
+            isOpen={isEditOpen}
+            onClose={onEditClose}
+            appData={temporalData}
+            selectedGrants={temporalData.grants.map((x) => x.id) ?? []}
+            handlerUpdate={handlerUpdate}
+          />
+        )
+      }
+
     </div>
   )
 

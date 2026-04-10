@@ -4,11 +4,11 @@ import type React from "react"
 import { useState } from "react"
 import { Navbar } from "./navbar"
 import { Sidebar } from "./Sidebar"
-import { TokenData } from "@/types"
+import { IsAuthenticate } from "@/lib/Auth"
 
 interface LayoutProps {
   children: React.ReactNode,
-  userData: TokenData,
+  userData: IsAuthenticate,
   corpName: string,
   abr: string
 }

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
-import { Button, Input, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, addToast, Image } from "@heroui/react"
+import { Button, Input, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, addToast, Image, code } from "@heroui/react"
 import { QrCode, CheckCircle, AlertTriangle, } from "lucide-react";
-import { MfaTotp } from '@/types';
-import { DeleteTotp, VerifyTotp } from '@/actions/ssoAction';
+import { ApiResponse, Create2FA } from '@/types';
+import RequestServer from '@/lib/client/api-client';
+import { handleError } from '@/lib/errorHandler';
 
 
 
@@ -10,7 +11,7 @@ interface iTotpProps {
     isOpen: boolean;
     onClose: () => void
     setTotpEnabled: any
-    topData?: MfaTotp,
+    topData?: Create2FA,
     status: string,
     fails: number,
     last_attemp_date: string
@@ -21,37 +22,57 @@ function TotpModal({ isOpen, onClose, topData, fails, setTotpEnabled }: iTotpPro
     const [totpSetupStep, setTotpSetupStep] = useState<"qr" | "verify" | "complete">("qr");
     const [totpCode, setTotpCode] = useState("")
     const [totpError, setTotpError] = useState("")
-    const [isVerifyingTotp, setIsVerifyingTotp] = useState(false)
+    const [isVerifyingTotp, setIsVerifyingTotp] = useState(false);
+    const [countFails, setCountFails] = useState(fails)
 
     const handleVerifyTotp = async () => {
-        if (totpCode.length !== 6) {
-            setTotpError("El código debe tener 6 dígitos")
-            return
-        }
-
-        setIsVerifyingTotp(true)
-        setTotpError("")
-
-
-        const resp = await VerifyTotp(topData?.id ?? "", totpCode)
-        if (resp.code !== 200 && fails + 1 < 5) {
-            setTotpError(`Código incorrecto. ${fails} fallos acumulados`)
-        }
-        if (resp.code !== 200 && fails + 1 === 5) {
-            setTotpError(`Demasiados intentos fallidos. La configuración ha sido parcialmente bloqueada por seguridad.`)
-        }
-        if (resp.code === 200) {
+        try {
+            if (totpCode.length !== 6) throw new Error("400|LONG_CODE|USER")
+            setIsVerifyingTotp(true)
+            setTotpError("")
+            const resp = await new RequestServer<ApiResponse<boolean>>("Mfa/verify")
+                .setPayload({
+                    id: topData?.id,
+                    code: totpCode
+                })
+                .exec();
             setTotpSetupStep("complete");
             setTotpEnabled(true);
-            
+        } catch (error: any) {
+            const [status, code, user] = error.message.split("|");
+            switch (code) {
+                case "LONG_CODE":
+                    setTotpError(`El código debe tener 6 dígitos`)
+                    break;
+                case "ERR_RETRIEVING_USER":
+                    setTotpError(`Código incorrecto. ${countFails + 1} fallos acumulados`);
+                    setCountFails(countFails + 1);
+                    break;
+                case "ERR_2FA_TOTP_MAX_ATTEMPTS":
+                    setTotpError("Se alcanzó el número máximo de intentos de 2FA.");
+                    break;
+                case "ERR_2FA_TOTP_LOCKED":
+                    setTotpError("El acceso por 2FA ha sido bloqueado.");
+                    break;
+                default:
+                    setTotpError("Ocurrió un error inesperado. Por favor, intenta de nuevo.");
+            }
         }
-        setIsVerifyingTotp(false)
-        
+        finally {
+            setIsVerifyingTotp(false);
+        }
     }
 
     const handlerCancelTotp = async () => {
-        const rep = await DeleteTotp(topData?.id ?? "");
-        onClose()
+        try {
+            await new RequestServer("Mfa/cancel")
+                .setQueryParams({ id: topData?.id })
+                .exec();
+            onClose()
+        } catch (error: any) {
+            handleError(error);
+        }
+
     }
     return (
         <Modal isOpen={isOpen} onClose={fails + 1 === 5 ? onClose : undefined} size="2xl" isDismissable={false}>

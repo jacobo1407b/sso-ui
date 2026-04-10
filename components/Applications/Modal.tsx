@@ -5,12 +5,13 @@ import { Select, SelectItem } from "@heroui/react";
 import { Button, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Input, Tooltip, Divider, addToast } from "@heroui/react"
 import { X, Plus, CheckCircle, Copy, Globe, EyeOff, Eye, Smartphone, Monitor, ImageIcon } from "lucide-react";
 import { useDB } from "../IndexedDBProvider";
-import { clientApp, Grant } from "@/types"
+import { ApiResponse, ClientApp, Grant } from "@/types"
 
-import { CreateApp, UpdateApp, UploadIcon } from "@/actions/clientAction";
-import { DownloadImage } from "@/actions/utilAction";
+
+import RequestServer from "@/lib/client/api-client";
+
 import GrantsCheck from "../Common/GrantsCheck";
-import { fetcher } from "@/lib/fetcher";
+import { handleError } from "@/lib/errorHandler";
 
 
 
@@ -40,17 +41,18 @@ const appTypes = [
 interface CreateApplicationModalProps {
   isOpen: boolean
   onClose: () => void
-  appData: clientApp | null
+  appData: ClientApp | null
   selectedGrants: Array<string>
-  imageDownloaded: string
   listGrants: Array<Grant>
+  handlerUpdate: (operationType: "CREATE" | "UPDATE", app: ClientApp) => void
 }
 
-function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imageDownloaded, listGrants }: CreateApplicationModalProps) {
+function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, listGrants, handlerUpdate }: CreateApplicationModalProps) {
 
   const db = useDB();
 
-  const [formData, setFormData] = useState<clientApp | null>(appData);
+  const [formData, setFormData] = useState<ClientApp | null>(appData);
+  const [isManualUpdate, setIsManualUpdate] = useState(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [iconFile, setIconFile] = useState<File | null>(null);
   const [isNewFile, setIsNewFile] = useState(false);
@@ -69,15 +71,13 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
 
 
   useEffect(() => {
-    setFormData(appData);
-    setGroupSelected(selectedGrants);
-
-    if (!db.ready || !appData?.client_icon_url || isOpen === false) return;
+    if (!db.ready || isOpen === false) return;
+    if (!appData?.client_icon_url && !appData?.last_update_date) return;
 
     const loadImage = async () => {
       try {
         const result = await db.getByPub("profiles", appData.client_icon_url);
-        const vigente = result?.fecha === new Date(appData?.last_update_date).getTime() // campo que marca vigencia
+        const vigente = result?.fecha === new Date(appData.last_update_date).getTime()
 
 
         if (result?.image && vigente) {
@@ -88,14 +88,15 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
         }
 
         // Caso 2 y 3: descargar y guardar
+        const imgBlob = await new RequestServer<Blob>("Util/Download")
+          .setQueryParams({ file: appData.client_icon_url })
+          .exec();
 
-        /*const imgBlob = await fetcher(() => DownloadImage(appData.client_icon_url));
-        console.log(imgBlob)
         setIconPreview(URL.createObjectURL(imgBlob));
         setIconFile(imgBlob as File);
 
         const newRecord = {
-          fecha: appData?.last_update_date ? new Date(appData?.last_update_date).getTime() : null,
+          fecha: appData.last_update_date ? new Date(appData.last_update_date).getTime() : null,
           image: imgBlob,
           pub: appData.client_icon_url,
           user_id: appData.client_id
@@ -104,28 +105,30 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
           await db.add("profiles", newRecord);
         } else {
           await db.update("profiles", result.id, newRecord);
-        }*/
+        }
       } catch (err) {
         console.error("Error cargando client_icon:", err);
       }
     };
 
     loadImage();
-  }, [db.ready, appData, selectedGrants, isOpen]);
+  }, [db.ready, isOpen]);
 
 
 
   const handlerClose = () => {
     onClose();
-    //setFormData(null);
-    //setIconFile(null);
-    //setIconPreview("");
-    //setGroupSelected([]);
+    setFormData(null);
+    setIconFile(null);
+    setIconPreview("");
+    setGroupSelected([]);
+    setIsManualUpdate(false)
   }
+
   const isValidUrl = (url: string): boolean => {
     try {
       const urlObj = new URL(url)
-      return /*urlObj.protocol === "http:" ||*/ urlObj.protocol === "https:"
+      return urlObj.protocol === "http:" /* urlObj.protocol === "http:"*/
     } catch {
       return false
     }
@@ -179,9 +182,6 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
 
 
 
-
-
-
   const handleCopy = async (text: string, field: string) => {
     try {
       await navigator.clipboard.writeText(text)
@@ -194,33 +194,44 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
 
   const handleSubmit = async () => {
     try {
+
       if (validateForm()) {
         setIsLoading(true);
-        let resp;
+        let resp: ApiResponse<ClientApp>;
 
-        if (appData === null) {
-          resp = await fetcher(() => CreateApp(formData, groupSelected));
+        if (!formData?.client_id) {
+          resp = await new RequestServer<ApiResponse<ClientApp>>("App/CreateApp")
+            .setPayload({
+              app: formData?.app_name,
+              grants: groupSelected,
+              data: formData
+            })
+            .exec();
         } else {
-          resp = await fetcher(() => UpdateApp({
-            description: formData?.description,
-            redirect_callback: formData?.redirect_callback,
-            scopes: formData?.scopes
-          }, formData?.client_id ?? ""));
-        }
+          resp = await new RequestServer<ApiResponse<ClientApp>>("App/UpdateApp")
+            .setUriParams({ id: formData?.client_id ?? "" })
+            .setPayload({
+              description: formData?.description,
+              redirect_callback: formData?.redirect_callback,
+              scopes: null//formData?.scopes
+            })
+            .exec();
 
+        }
+        setIsManualUpdate(true);
 
         if (isNewFile) {
-          //load icono
-          fetcher(() => UploadIcon(iconFile!, resp.data.client_id, resp.data?.client_icon_url));
+          const upl = await new RequestServer<ApiResponse<string>>("App/UploadIcon")
+            .setQueryParams({ id: resp.data.client_id, pub: resp.data.client_icon_url })
+            .setPayload(iconFile)
+            .exec();
+          resp.data.client_icon_url = upl.data
         }
+        setFormData(resp.data);
 
-        setFormData(prev => ({
-          ...prev!,
-          client_id: resp.data.client_id,
-          client_secret: resp.data.client_secret
-        }));
+        handlerUpdate(!formData?.client_id ? "CREATE" : "UPDATE", resp.data);
         addToast({
-          title: `${appData === null ? 'Creado' : "Actualizado"} correctamente`,
+          title: `${!formData?.client_id ? 'Creado' : "Actualizado"} correctamente`,
           description: "",
           color: "success",
           variant: "solid"
@@ -228,7 +239,7 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
 
       }
     } catch (error: any) {
-      console.log(error)
+      handleError(error);
     } finally {
       setIsLoading(false);
     }
@@ -301,7 +312,7 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
         <ModalHeader className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
             <Plus className="w-5 h-5" />
-            {appData === null ? "Crear Nueva" : "Actualizar"} Aplicación OAuth
+            {!formData?.client_id ? "Crear Nueva" : "Actualizar"} Aplicación OAuth
           </div>
         </ModalHeader>
         <ModalBody>
@@ -313,8 +324,8 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
                 <h4 className="text-lg font-semibold text-foreground">Información Básica</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
-                    value={formData?.app_name}
-                    isDisabled={appData === null ? false : true}
+                    value={formData?.app_name ?? ""}
+                    isDisabled={!formData?.client_id ? false : true}
                     aria-label=""
                     name="app_name"
                     label="Nombre de la aplicación"
@@ -324,7 +335,7 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
                     isRequired
                     isInvalid={!!errors.name}
                   />
-                  {!appData && (<div className="space-y-2">
+                  {!formData?.client_id && (<div className="space-y-2">
                     <Select
                       aria-label="1"
                       classNames={{
@@ -395,7 +406,7 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
                           <p className="font-medium text-foreground">{iconFile?.name}</p>
                           <p className="text-sm text-default-500">{iconFile && (iconFile.size / 1024).toFixed(1)} KB</p>
                         </div>
-                        {!appData && (
+                        {!formData?.client_id && (
                           <Button
                             isIconOnly
                             size="sm"
@@ -408,7 +419,7 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
                             <X className="w-4 h-4" />
                           </Button>
                         )}
-                        {appData && (
+                        {formData?.client_id && (
                           <input
                             type="file"
                             accept="image/*"
@@ -440,7 +451,7 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
                     )}
                   </div>
                 </div>
-                {!appData && (<div>
+                <div>
                   <div className="flex gap-2">
                     <Input
                       value={formData?.client_id}
@@ -471,8 +482,8 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
                       </Button>
                     </Tooltip>
                   </div>
-                </div>)}
-                {!appData && (<div>
+                </div>
+                <div>
                   <div className="flex gap-2">
                     <Input
                       size="sm"
@@ -508,7 +519,7 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
                       </Button>
                     </Tooltip>
                   </div>
-                </div>)}
+                </div>
 
               </div>
             </form>
@@ -516,7 +527,7 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
 
             {/* OAuth Grants */}
 
-            {!appData && (
+            {!formData?.client_id && (
               <GrantsCheck
                 selectedGrants={groupSelected}
                 operationType="CREATE"
@@ -572,11 +583,11 @@ function CreateApplicationModal({ isOpen, onClose, appData, selectedGrants, imag
           <Button
             color="primary"
             isLoading={isLoading}
-            isDisabled={appData === null && (formData?.client_id !== "" && formData?.client_id !== undefined)}
+            //isDisabled={appData === null && (formData?.client_id !== "" && formData?.client_id !== undefined)}
             onPress={handleSubmit}
             className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white"
           >
-            {appData === null ? "Crear" : "Actualizar"} Aplicación
+            {!formData?.client_id ? "Crear" : "Actualizar"} Aplicación
           </Button>
         </ModalFooter>
       </ModalContent>

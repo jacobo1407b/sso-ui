@@ -1,7 +1,7 @@
 "use client"
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { User, Chip, Tooltip, useDisclosure } from "@heroui/react"
+import { Chip, Tooltip, useDisclosure } from "@heroui/react"
 import { UserPlus, Eye, RotateCcwKey } from "lucide-react";
 import AvatarCustom from "../Avatar";
 
@@ -12,35 +12,19 @@ import ResetPass from "./ResetPass";
 
 import UserManagementHeader from "../Common/UserManagementHeader";
 import ReusableTableCard from "../Common/CommonTable";
-import {GetAll} from "@/actions/userAction";
+import RequestServer from "@/lib/client/api-client";
 
+import { User, ApiResponse } from "@/types"
 
 
 
 interface iUsersProps {
-  users: Array<usersList>,
+  users: Array<User>,
   page: number,
   pageSize: number,
   totalCount: number
 }
-interface usersList {
-  user_id: string
-  username: string
-  name: string
-  last_name: string
-  second_last_name: string
-  email: string
-  phone: string
-  profile_picture: string
-  status: string
-  last_login: string
-  last_update_avatar: number | null
-  userBusiness: UserBusiness
-}
 
-interface UserBusiness {
-  job_title: string
-}
 
 
 export default function Users(artifact: iUsersProps) {
@@ -49,7 +33,7 @@ export default function Users(artifact: iUsersProps) {
   const { isOpen: isResetOpen, onOpen: onResetOpen, onClose: onResetClose } = useDisclosure();
   const [userId, setUserId] = useState("");
 
-  const [userData, setUserData] = useState<Array<usersList>>([]);
+  const [userData, setUserData] = useState<Array<User>>([]);
   const [totalPages, setTotalPages] = useState(0);
   const [pageSize, setPageSize] = useState(1);
   const [currentPage, setCurrentPage] = useState(1)
@@ -68,15 +52,31 @@ export default function Users(artifact: iUsersProps) {
     onResetOpen()
   }
 
+  const onUpdateState = (operation: "CREATE" | "UPDATE", user: User) => {
+    if (operation === "CREATE") {
+      setUserData(prev => [user, ...prev]);
+    }
+    if (operation === "UPDATE") {
+      setUserData(prev => prev.map(u => u.user_id === user.user_id ? user : u));
+    }
+  }
+
   const handlerNavigation = async (page: number) => {
-    const result = await GetAll(page, artifact.pageSize);
+    const result = await new RequestServer<ApiResponse<User[]>>('Users/GetAll')
+      .setQueryParams({ page, pageSize: artifact.pageSize })
+      .exec();
+
     setUserData(result.data);
     setTotalPages(result.totalCount);
     setPageSize(result.pageSize);
     setCurrentPage(result.page);
   }
+
   const handlerSearch = async (value: string) => {
-    const result = await GetAll(1, artifact.pageSize, value ?? undefined);
+    const result = await new RequestServer<ApiResponse<User[]>>('Users/GetAll')
+      .setQueryParams({ page: 1, pageSize: 100, user: value })
+      .exec();
+
     setUserData(result.data);
     setTotalPages(result.data.length === 0 ? 1 : result.data.length);
     setPageSize(result.pageSize);
@@ -105,7 +105,7 @@ export default function Users(artifact: iUsersProps) {
         renderRow={(row) => [
           <AvatarCustom
             profile_picture={row.profile_picture}
-            last_update_avatar={row.last_update_avatar}
+            last_update_avatar_t={row.last_update_avatar}
             email={row.email}
             name={row.name}
             user_id={row.user_id}
@@ -158,30 +158,10 @@ export default function Users(artifact: iUsersProps) {
         }}
         operation="CREATE"
         user={null}
-        userId=""
+        userId="1"
+        isMain={false}
+        onUpdateState={onUpdateState}
       />
-
-      {/**
-       * <CommonModal
-        isOpen={isDeleteOpen}
-        onClose={onDeleteClose}
-        title={
-          <div className="flex items-center gap-2"><AlertTriangle className="w-5 h-5 text-danger" /> Confirmar eliminación</div>}
-        body={
-          <p className="text-default-500">
-            ¿Estás seguro de que deseas eliminar al usuario{" "}
-            <span className="font-semibold text-foreground">{currentUser?.name} {currentUser?.last_name}</span>? Esta acción no se puede
-            deshacer.
-          </p>
-        }
-        footer={
-          <>
-            <Button variant="light" onPress={onDeleteClose}>Cancelar</Button>
-            <Button color="danger" >Eliminar permanentemente</Button>
-          </>
-        }
-      />
-       */}
 
 
       <ResetPass

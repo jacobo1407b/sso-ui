@@ -1,10 +1,24 @@
 import Aplications from "@/components/Applications";
-import { GetClients, GetListGrants } from "@/actions/clientAction";
+import { api } from "@/lib/api";
+
+
+
+
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Aplicaciones - SSO',
+};
+
 
 async function Aplication() {
-  const resp = await GetClients(1,20);
-  const listGrants = await GetListGrants();
-  if(resp.code === 403) return null;
+
+  const resp = await api.apps.getAll(true,{
+    page: 1,
+    pageSize: 20
+  });
+  const listGrants = await api.apps.getGrants(true);
+  if (resp.code === 403) return null;
 
   return <Aplications
     data={resp.data}

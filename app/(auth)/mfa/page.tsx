@@ -1,8 +1,13 @@
-"use server"
+
 import MfaVerification from "@/components/Mfa";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Verificación de Identidad - SSO',
+};
 
 async function MfaVerifyPage({ searchParams }: any) {
   const params = await searchParams;
@@ -10,6 +15,7 @@ async function MfaVerifyPage({ searchParams }: any) {
   const token = cookieStore.get('sso_token')?.value ?? "eyJsb2dfaW5fc3RhdHVzIjpudWxsfQ==.eyJsb2dfaW5fc3RhdHVzIjpudWxsfQ=="
   const encodeData = atob(token?.split(".")[1]);
   const parseData = JSON.parse(encodeData);
+
   if (parseData.log_status === "SUCCESS") redirect("/");
   if (parseData.log_in_status === null) redirect("/signin");
 
@@ -22,6 +28,7 @@ async function MfaVerifyPage({ searchParams }: any) {
     callbackUrl={params.callbackUrl}
     userId={parseData.userId}
     last_update_avatar={parseData.last_update_avatar ?? null}
+    company={process.env.NEXT_BUSSINESS_NAME}
   />
 }
 

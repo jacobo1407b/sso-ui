@@ -3,7 +3,6 @@
 import type React from "react"
 import { useRouter } from 'next/navigation';
 import { useState } from "react";
-import { fetcher } from "@/lib/fetcher";
 import { Input, Button, Card, CardBody, CardHeader } from "@heroui/react";
 import { Mail, Eye, KeyRound, EyeOff } from "lucide-react";
 import { useDB } from "@/components/IndexedDBProvider";
@@ -48,29 +47,36 @@ export default function LoginPage({ callbackUrl, empresaCorp, abr }: iSigningPro
         setErrors(newErrors)
         return Object.keys(newErrors).length === 0
     }
+
+
+
     const redirectToCallbackUrl = (res: any, callbackUrl?: string) => {
-        if (!res.accessToken) throw new Error(res.name)
-        const url = res.user.totp
+        const url = res.totp
             ? callbackUrl ? `/mfa?callbackUrl=${encodeURIComponent(callbackUrl)}` : "/mfa"
             : (callbackUrl || "/");
 
         router.push(url);
     };
+
+
+
     const handleSubmit = async (e: React.FormEvent) => {
         try {
             e.preventDefault()
 
             if (!validateForm()) return
             setIsLoading(true);
-            const res = await fetcher(() => loginAction(email, password));
-            const dateProfile = res.user.last_update_avatar ? new Date(res.user.last_update_avatar).getTime() : null;
-            const isStored = await db.getByUser("profiles", res.user.user_id);
-            if (isStored === null) {
-                await db.add("profiles", { fecha: dateProfile, image: null, pub: res.user.profile_picture, user_id: res.user.user_id });
-            } else {
-                await db.update("profiles", isStored.id as number, { fecha: dateProfile, image: isStored.image, pub: res.user.profile_picture, user_id: res.user.user_id });
+            const login = await loginAction(email, password);
+            if (login) {
+                const dateProfile = login.last_update_avatar ? new Date(login.last_update_avatar).getTime() : null;
+                const isStored = await db.getByUser("profiles", login.user_id);
+                if (isStored === null) {
+                    await db.add("profiles", { fecha: dateProfile, image: null, pub: login.profile_picture, user_id: login.user_id });
+                } else {
+                    await db.update("profiles", isStored.id as number, { fecha: dateProfile, image: isStored.image, pub: login.profile_picture, user_id: login.user_id });
+                }
+                redirectToCallbackUrl(login, callbackUrl);
             }
-            redirectToCallbackUrl(res, callbackUrl);
 
         } catch (error: any) {
             handleError(error);

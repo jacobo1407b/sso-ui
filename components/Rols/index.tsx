@@ -4,14 +4,14 @@ import Link from "next/link";
 import { Tooltip } from "@heroui/react";
 import { Eye } from "lucide-react";
 
-import { GetRols } from "@/actions/rolsAction";
+import RequestServer from "@/lib/client/api-client";
 import UserManagementHeader from "../Common/UserManagementHeader";
 import ReusableTableCard from "../Common/CommonTable";
-import { ListRols } from "@/types";
+import { ApiResponse, Role } from "@/types";
 
 
 interface iRolsProps {
-  rols: Array<ListRols>
+  rols: Array<Role>
   totalPage: number
   page: number
   pageSize: number
@@ -21,7 +21,7 @@ function Rols({ rols, totalPage, page, pageSize }: iRolsProps) {
   const [totalPages, setTotalPages] = useState(0);
   const [pageSizes, setPageSizes] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
-  const [dataRole, setDataRole] = useState<Array<ListRols>>([]);
+  const [dataRole, setDataRole] = useState<Array<Role>>([]);
 
   useEffect(() => {
     setTotalPages(totalPage);
@@ -32,16 +32,29 @@ function Rols({ rols, totalPage, page, pageSize }: iRolsProps) {
 
 
   const handlerSearch = async (value: string) => {
-    const result = await GetRols(1, pageSize, value ?? undefined);
-    setTotalPages(result.total);
+    const result = await new RequestServer<ApiResponse<Role[]>>("Role/GetAll")
+      .setQueryParams({
+        page: 1,
+        size: pageSize,
+        rol_code: value === "" ? undefined : value
+      })
+      .exec();
+    setTotalPages(result.total ?? 0);
     setPageSizes(result.pageSize);
     setCurrentPage(result.page);
     setDataRole(result.data);
   }
 
   const handlerNavigation = async (page: number) => {
-    const result = await GetRols(page, pageSize);
-    setTotalPages(result.total);
+    const result = await new RequestServer<ApiResponse<Role[]>>("Role/GetAll")
+      .setQueryParams({
+        page,
+        size: pageSizes,
+        rol_code: undefined
+      })
+      .exec();
+
+    setTotalPages(result.total ?? 0);
     setPageSizes(result.pageSize);
     setCurrentPage(result.page);
     setDataRole(result.data);
