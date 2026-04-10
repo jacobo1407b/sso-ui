@@ -9,7 +9,7 @@ function generatePassword(length: number = 12, specialPrefix = "$"): string {
 
   const getRandom = (chars: string) => chars[Math.floor(Math.random() * chars.length)];
 
-  // Garantiza al menos uno de cada tipo
+  // Garantiza al
   const required = [
     getRandom(upper),
     getRandom(lower),
