@@ -19,7 +19,7 @@ export class BaseClient {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    this.baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000';
   }
 
   private async getValidToken(agent: string, ip: string, isLoad: boolean): Promise<SsoResponse> {
@@ -124,6 +124,8 @@ export class BaseClient {
       const contentType = response.headers.get("Content-Type") ?? "";
       const isJson = contentType.includes("application/json");
       const data = isJson ? await response.json() : await response.blob();
+      
+
       if (!response.ok) {
         throw new ApiError(response.status, data.message || 'unknow', data.code, data.details || "SYS");
       }

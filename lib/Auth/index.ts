@@ -130,7 +130,7 @@ export default class OAuthServer {
     private response: NextResponse | null;
 
     constructor() {
-        this.baseUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`;
+        this.baseUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}`;
         this.client = process.env.API_CLIENT_ID ?? '';
         this.secret = process.env.API_CLIENT_SECRET ?? '';
         this.params = new URLSearchParams();
@@ -213,7 +213,9 @@ export default class OAuthServer {
             headers: this.headers,
             body: this.method === "POST" ? this.params : undefined
         });
+        //console.log(response)
         const resp = await response.json();
+        //console.log(resp)
         if (!response.ok) throw new ApiError(resp.status, resp.message, resp.code, resp.details);
         return resp;
     }

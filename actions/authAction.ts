@@ -11,6 +11,7 @@ export async function loginAction(username: string, password: string): Promise<O
                 resolve(auth.getUserData())
             })
             .catch((err) => {
+                console.log(err)
                 reject(`${err.status}|${err.code}|${err.details}`);
             })
     });
